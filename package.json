@@ -1,0 +1,20 @@
+{
+  "name": "Gudja Web Crawler",
+  "version": "1.0.0",
+  "description": "Web Crawler for CS 467",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "OSU: Nikolas Brix, Mike Kozlowski, Valorie Dodge",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.13.3",
+    "cookie-parser": "^1.4.4",
+    "express": "^4.16.4",
+    "express-handlebars": "^3.0.2",
+    "express-session": "^1.16.1",
+    "mysql": "^2.8.0",
+    "request": "^2.88.0"
+  }
+}
