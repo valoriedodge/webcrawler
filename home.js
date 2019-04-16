@@ -15,7 +15,7 @@ app.use(express.static('assets'));
 
 app.engine('handlebars', handlebars.engine);
 app.set('view engine', 'handlebars');
-app.set('port', 6962);
+app.set('port', process.env.PORT || 80);
 
 app.get('/',function(req,res,next){
   var context = {};
