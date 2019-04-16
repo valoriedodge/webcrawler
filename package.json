@@ -1,5 +1,5 @@
 {
-  "name": "Gudja Web Crawler",
+  "name": "gudjawebcrawler",
   "version": "1.0.0",
   "description": "Web Crawler for CS 467",
   "main": "app.js",
