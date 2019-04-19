@@ -111,13 +111,13 @@ function breadthFirst(url, limit, keyword) {
 	return true;
 }
 
-function getLinks(url) {
+module.exports.getLinks = function(url) {
 	// Set user-agent to prevent websites from blocking the crawler
 	var userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 	var customRequest = request.defaults({
 		headers: {'User-Agent': userAgent}
 	});
-	
+	console.log("hello");
 	// Get html body from url
 	customRequest.get(url, function(err, res, body) {
 		if(err) {
@@ -135,11 +135,9 @@ function getLinks(url) {
 			return links;
 		}
 	});
-}
+};
 
 function logToFile(link) {
 	return;
 }
 
-module.exports.depthFirst = depthFirst
-module.exports.breadthFirst = breadthFirst

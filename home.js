@@ -7,6 +7,9 @@ var session = require('express-session');
 var request = require('request');
 var cookieParser = require('cookie-parser');
 
+//DEBUG
+var link = require('./crawler/crawler');
+
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -19,7 +22,9 @@ app.set('port', process.env.PORT || 80);
 
 app.get('/',function(req,res,next){
   var context = {};
-  context.title = "Crawl the Web from a Starting URL"
+  context.title = "Crawl the Web from a Starting URL";
+  console.log("hello world");
+  link.getLinks("www.msn.com");
   res.render('home',context);
 });
 
