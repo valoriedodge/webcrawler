@@ -23,8 +23,6 @@ app.set('port', process.env.PORT || 80);
 app.get('/',function(req,res,next){
   var context = {};
   context.title = "Crawl the Web from a Starting URL";
-  console.log("hello world");
-  link.getLinks("www.msn.com");
   res.render('home',context);
 });
 
