@@ -7,9 +7,6 @@ var session = require('express-session');
 var request = require('request');
 var cookieParser = require('cookie-parser');
 
-//DEBUG
-var link = require('./crawler/crawler');
-
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
