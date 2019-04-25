@@ -19,7 +19,7 @@ app.set('port', process.env.PORT || 80);
 
 app.get('/',function(req,res,next){
   var context = {};
-  context.title = "Crawl the Web from a Starting URL"
+  context.title = "Crawl the Web from a Starting URL";
   res.render('home',context);
 });
 
