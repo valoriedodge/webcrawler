@@ -25,47 +25,17 @@ function findKeyword() {
 }
 
 function isUrlAbsolutePath(url) {
-	var pattern = RegExp('https?:\/\//i');
+	var pattern = new RegExp('https?:\/\/', 'i');
 	return pattern.test(url);
 }
 
-function convertUrlRelativeToAbsolute(strRelative, url) {
-	var strAbsolute = "";
-	return strAbsolute;
-}
-
 function isLimitValid(limit, max) {
-	if (limit > 0 && limit <= max) {
+	if (limit > 0 && limit <= max) 
 		return true;
-	}
-	else {
+	else 
 		return false;
-	}
 }
 
-/**
- * Performs depth-first crawl of links on a webpage.
- * @param {string} url - website url to start crawl at.
- * @param {number} limit - number of pages to visit.
- * @param {string} keyword - keyword that stops crawler if found on a page.
- * @return {boolean} if function exited successfully.
- */
-function depthFirst(url, limit, keyword) {
-	for (var i = 0; i < depth; i++) {
-		var links = getLinks(url);	// get all links from webpage
-
-		// Check if there are links to follow on page
-		if (links) {
-			var link = links[Math.floor(Math.random() * links.length)].text();	// get random link
-			logToFile(link);
-			url = link;
-		}
-		else {
-			break;
-		}
-	}
-	return true;
-}
 
 function addLinksToQueue(url, queue) {
 	var links = getLinks(url);
@@ -78,20 +48,20 @@ function addLinksToQueue(url, queue) {
 function breadthFirst(url, limit, keyword) {
 	var queue = [];
 	var currentDepth = 1;
-
+	
 	// Add all links to queue from webpage and add null to the end to signify
 	// a new level of depth.
 	addLinksToQueue(url, queue);
 	queue.push(null);
-
+	
 	while (true) {
 		url = links.shift();
-
+		
 		// Check if a new level (depth) has been reached, otherwise continue
 		// traversing links.
 		if (url == null) {
 			currentDepth++;
-
+			
 			// Break out of loop if depth has reached the limit
 			if (currentDepth > limit) {
 				break;
@@ -107,36 +77,97 @@ function breadthFirst(url, limit, keyword) {
 			url = queue.shift();
 		}
 	}
-
+	
 	return true;
 }
 
-module.exports.getLinks = function(url) {
+function scrubLinks(links, currentPage) {
+	var uniqueLinks = new Set();
+
+	$(links).each(function(i, link) {
+		var url = $(link).attr('href');
+
+		// Ignore links to elements
+		if (url.charAt(0) == '#')
+			return true;
+
+		// Convert relative paths to absolute
+		if (!isUrlAbsolutePath(url)) 
+			url = currentPage + url;
+		
+		uniqueLinks.add(url);
+	});
+
+	// Return an array from the set of unique links
+	let result = Array.from(uniqueLinks);
+	return result;
+}
+
+function getLinks(url, callback) {
 	// Set user-agent to prevent websites from blocking the crawler
 	var userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 	var customRequest = request.defaults({
 		headers: {'User-Agent': userAgent}
 	});
-	console.log("hello");
+
 	// Get html body from url
 	customRequest.get(url, function(err, res, body) {
 		if(err) {
-			console.log(err);
-			return undefined;
+			console.error(err);
+			callback(err, null);
+			return err;
 		}
 		else {
 			$ = cheerio.load(body);
 			links = $('a');
 
-			//debug
-			$(links).each(function(i, link) {
-				console.log($(link).text());
-			});
-			return links;
+			// Get rid of unwanted links to elements and convert relative paths
+			// to absolute paths.
+			var result = scrubLinks(links, url);
+			callback(null, result);
+			return result;
 		}
 	});
 };
 
+/**
+ * Performs depth-first crawl of links on a webpage.
+ * @param {string} url - website url to start crawl at.
+ * @param {number} limit - number of pages to visit.
+ * @param {string} keyword - keyword that stops crawler if found on a page.
+ * @return {boolean} if function exited successfully.
+ */
+module.exports.depthFirst = function(url, limit, keyword) {	
+	for (var i = 0; i < limit; i++) {
+		var links = getLinks(url, processLinks);	// get all links from webpage
+
+		// callback 
+		function processLinks(error, links) {
+			// DEBUG 
+			/*
+			links.forEach(function(x) {
+				console.log(x);
+			});
+			*/
+
+			if (error) return console.error(error);
+
+			// Check if there are links to follow on page
+			if (links && links.length) {
+				var link = links[Math.floor(Math.random() * links.length)];	// get random link
+				console.log(link);
+				logToFile(link);
+				url = link;
+			}
+			else {
+				console.log('No links to follow'); 
+			}
+		}
+	}
+	return true;
+}
+
 function logToFile(link) {
 	return;
 }
+
