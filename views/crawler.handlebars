@@ -33,7 +33,14 @@
       </form>
     </div>
     <div class="col-md-8">
-      D3 visualization
+			<h4>Prevous URL Searches</h4>
+			<div>
+			  <ul>
+			  {{#each pastURLs}}
+			    <li>{{this.url}}</li>
+			  {{/each}}
+		  	</ul>
+			</div>
     </div>
   </div>
 </div>

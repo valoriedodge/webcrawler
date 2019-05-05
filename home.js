@@ -7,6 +7,7 @@ var session = require('express-session');
 var request = require('request');
 var cookieParser = require('cookie-parser');
 var crypto = require("crypto");
+// var cytoscape = require('cytoscape');
 
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -25,8 +26,6 @@ function randomString(){
 app.get('/',function(req,res,next){
   var context = {};
   context.title = "Crawl the Web from a Starting URL";
-  res.clearCookie("userData");
-  res.clearCookie("pastURLs");
   res.render('home', context);
 });
 
@@ -34,35 +33,37 @@ app.get('/',function(req,res,next){
 app.get('/crawler',function(req,res,next){
   var context = {};
   context.title = "Crawl the Web from a Starting URL"
-
+  var pastURLs = [];
+  if (req.cookies && req.cookies["pastURLs"]) {
+    // console.log(req.cookies["pastURLs"]);
+    pastURLs = req.cookies["pastURLs"];
+  }
+  context.pastURLs = pastURLs;
+  // console.log(req.cookies);
   res.render('crawler',context);
 });
 
-app.get('/history',function(req,res,next){
-  var context = {};
-  context.title = "Previous URL searches"
-  var pastURLs = [];
-  if (req.cookies) pastURLs = req.cookies["pastURLs"];
-  console.log(req.cookies);
-  console.log(pastURLs);
-
-  context.pastURLs = pastURLs;
-  res.render('history',context);
-});
+// app.get('/history',function(req,res,next){
+//   var context = {};
+//   context.title = "Previous URL searches"
+//   var pastURLs = [];
+//   if (req.cookies) pastURLs = req.cookies["pastURLs"];
+//   console.log(req.cookies);
+//   console.log(pastURLs);
+//
+//   context.pastURLs = pastURLs;
+//   res.render('history',context);
+// });
 
 app.post('/submit',function(req,res,next){
   var context = {};
   var given_url = req.body.url;
-  console.log(given_url);
-  console.log(req.body.maxDepth);
-  console.log(req.body.searchType);
-  console.log(req.body.keyword);
   var pastURLs = [];
-  if (req.cookie) pastURLs = req.cookie["pastURLs"];
+  if (req.cookies) pastURLs = req.cookies["pastURLs"];
   pastURLs.push({"url":given_url});
   res.cookie("pastURLs", pastURLs);
-
-  res.render('crawler',context);
+  context.graph = given_url;
+  res.render('graph',context);
 });
 
 app.get('/about',function(req,res,next){
@@ -96,7 +97,7 @@ app.get('/stream',function(req,res,next){
 });
 app.get('/graph',function(req,res,next){
   var context = {};
-  context.author = null;
+  context.graph = "graph";
   res.render('graph', context);
 });
 app.get('/:graph',function(req,res,next){
