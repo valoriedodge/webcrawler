@@ -37,47 +37,65 @@ function isLimitValid(limit, max) {
 }
 
 
-function addLinksToQueue(url, queue) {
-	var links = getLinks(url);
-	links.forEach(function(link) {
-		queue.push(link);
-	});
-	return;
+function addLinksToQueue(url, queue, callback) {
+	var links = getLinks(url, addLinks);
+
+	// callback 
+	function addLinks(error, links) {
+		if (error) return console.error(error);
+
+		console.log();
+		links.forEach(function(link) {
+			queue.push(link);
+			console.log(link);
+		});
+
+		callback(null, queue);
+	}
 }
 
-function breadthFirst(url, limit, keyword) {
+module.exports.breadthFirst = function(url, limit, keyword) {
 	var queue = [];
 	var currentDepth = 1;
 	
 	// Add all links to queue from webpage and add null to the end to signify
 	// a new level of depth.
-	addLinksToQueue(url, queue);
 	queue.push(null);
-	
-	while (true) {
-		url = links.shift();
+	addLinksToQueue(url, queue, bfs);
+
+	function bfs(error, queue) {
+		queue.push(null);
 		
-		// Check if a new level (depth) has been reached, otherwise continue
-		// traversing links.
-		if (url == null) {
-			currentDepth++;
+		while (true) {
+			url = queue.shift();
 			
-			// Break out of loop if depth has reached the limit
-			if (currentDepth > limit) {
-				break;
+			// Check if a new level (depth) has been reached, otherwise continue
+			// traversing links.
+			if (url == null) {
+				currentDepth++;
+				
+				// Break out of loop if depth has reached the limit
+				if (currentDepth > limit) {
+					break;
+				}
+				else {
+					// Mark that a new level has been reached
+					queue.push(null);
+					url = queue.shift();
+					console.log('==================================================');
+				}
 			}
 			else {
-				// Mark that a new level has been reached
-				queue.push(null);
-				url = queue.shift();
+				addLinksToQueue(url, queue, newUrl);
+
+				function newUrl(error, queue) {
+					url = queue.shift();
+				}
+				
 			}
 		}
-		else {
-			addLinksToQueue(url, queue);
-			url = queue.shift();
-		}
 	}
-	
+
 	return true;
 }
 
@@ -88,13 +106,13 @@ function scrubLinks(links, currentPage) {
 		var url = $(link).attr('href');
 
 		// Ignore links to elements
-		if (url.charAt(0) == '#')
+		if (url != null && url.charAt(0) == '#')
 			return true;
 
 		// Convert relative paths to absolute
 		if (!isUrlAbsolutePath(url)) 
 			url = currentPage + url;
-		
+
 		uniqueLinks.add(url);
 	});
 
@@ -143,13 +161,6 @@ module.exports.depthFirst = function(url, limit, keyword) {
 
 		// callback 
 		function processLinks(error, links) {
-			// DEBUG 
-			/*
-			links.forEach(function(x) {
-				console.log(x);
-			});
-			*/
-
 			if (error) return console.error(error);
 
 			// Check if there are links to follow on page
