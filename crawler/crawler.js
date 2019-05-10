@@ -25,23 +25,128 @@ function findKeyword() {
 }
 
 function isUrlAbsolutePath(url) {
-	var pattern = RegExp('https?:\/\//i');
+	var pattern = new RegExp('https?:\/\/', 'i');
 	return pattern.test(url);
 }
 
-function convertUrlRelativeToAbsolute(strRelative, url) {
-	var strAbsolute = "";
-	return strAbsolute;
+function isLimitValid(limit, max) {
+	if (limit > 0 && limit <= max) 
+		return true;
+	else 
+		return false;
 }
 
-function isLimitValid(limit, max) {
-	if (limit > 0 && limit <= max) {
-		return true;
-	}
-	else {
-		return false;
+
+function addLinksToQueue(url, queue, callback) {
+	var links = getLinks(url, addLinks);
+
+	// callback 
+	function addLinks(error, links) {
+		if (error) return console.error(error);
+
+		console.log();
+		links.forEach(function(link) {
+			queue.push(link);
+			console.log(link);
+		});
+
+		callback(null, queue);
 	}
 }
+
+module.exports.breadthFirst = function(url, limit, keyword) {
+	var queue = [];
+	var currentDepth = 1;
+	
+	// Add all links to queue from webpage and add null to the end to signify
+	// a new level of depth.
+	queue.push(null);
+	addLinksToQueue(url, queue, bfs);
+
+	function bfs(error, queue) {
+		queue.push(null);
+		
+		while (true) {
+			url = queue.shift();
+			
+			// Check if a new level (depth) has been reached, otherwise continue
+			// traversing links.
+			if (url == null) {
+				currentDepth++;
+				
+				// Break out of loop if depth has reached the limit
+				if (currentDepth > limit) {
+					break;
+				}
+				else {
+					// Mark that a new level has been reached
+					queue.push(null);
+					url = queue.shift();
+					console.log('==================================================');
+				}
+			}
+			else {
+				addLinksToQueue(url, queue, newUrl);
+
+				function newUrl(error, queue) {
+					url = queue.shift();
+				}
+				
+			}
+		}
+	}
+
+	return true;
+}
+
+function scrubLinks(links, currentPage) {
+	var uniqueLinks = new Set();
+
+	$(links).each(function(i, link) {
+		var url = $(link).attr('href');
+
+		// Ignore links to elements
+		if (url != null && url.charAt(0) == '#')
+			return true;
+
+		// Convert relative paths to absolute
+		if (!isUrlAbsolutePath(url)) 
+			url = currentPage + url;
+
+		uniqueLinks.add(url);
+	});
+
+	// Return an array from the set of unique links
+	let result = Array.from(uniqueLinks);
+	return result;
+}
+
+function getLinks(url, callback) {
+	// Set user-agent to prevent websites from blocking the crawler
+	var userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+	var customRequest = request.defaults({
+		headers: {'User-Agent': userAgent}
+	});
+
+	// Get html body from url
+	customRequest.get(url, function(err, res, body) {
+		if(err) {
+			console.error(err);
+			callback(err, null);
+			return err;
+		}
+		else {
+			$ = cheerio.load(body);
+			links = $('a');
+
+			// Get rid of unwanted links to elements and convert relative paths
+			// to absolute paths.
+			var result = scrubLinks(links, url);
+			callback(null, result);
+			return result;
+		}
+	});
+};
 
 /**
  * Performs depth-first crawl of links on a webpage.
@@ -50,93 +155,30 @@ function isLimitValid(limit, max) {
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @return {boolean} if function exited successfully.
  */
-function depthFirst(url, limit, keyword) {
-	for (var i = 0; i < depth; i++) {
-		var links = getLinks(url);	// get all links from webpage
+module.exports.depthFirst = function(url, limit, keyword) {	
+	for (var i = 0; i < limit; i++) {
+		var links = getLinks(url, processLinks);	// get all links from webpage
 
-		// Check if there are links to follow on page
-		if (links) {
-			var link = links[Math.floor(Math.random() * links.length)].text();	// get random link
-			logToFile(link);
-			url = link;
-		}
-		else {
-			break;
-		}
-	}
-	return true;
-}
+		// callback 
+		function processLinks(error, links) {
+			if (error) return console.error(error);
 
-function addLinksToQueue(url, queue) {
-	var links = getLinks(url);
-	links.forEach(function(link) {
-		queue.push(link);
-	});
-	return;
-}
-
-function breadthFirst(url, limit, keyword) {
-	var queue = [];
-	var currentDepth = 1;
-
-	// Add all links to queue from webpage and add null to the end to signify
-	// a new level of depth.
-	addLinksToQueue(url, queue);
-	queue.push(null);
-
-	while (true) {
-		url = links.shift();
-
-		// Check if a new level (depth) has been reached, otherwise continue
-		// traversing links.
-		if (url == null) {
-			currentDepth++;
-
-			// Break out of loop if depth has reached the limit
-			if (currentDepth > limit) {
-				break;
+			// Check if there are links to follow on page
+			if (links && links.length) {
+				var link = links[Math.floor(Math.random() * links.length)];	// get random link
+				console.log(link);
+				logToFile(link);
+				url = link;
 			}
 			else {
-				// Mark that a new level has been reached
-				queue.push(null);
-				url = queue.shift();
+				console.log('No links to follow'); 
 			}
 		}
-		else {
-			addLinksToQueue(url, queue);
-			url = queue.shift();
-		}
 	}
-
 	return true;
 }
-
-module.exports.getLinks = function(url) {
-	// Set user-agent to prevent websites from blocking the crawler
-	var userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-	var customRequest = request.defaults({
-		headers: {'User-Agent': userAgent}
-	});
-	console.log("hello");
-	// Get html body from url
-	customRequest.get(url, function(err, res, body) {
-		if(err) {
-			console.log(err);
-			return undefined;
-		}
-		else {
-			$ = cheerio.load(body);
-			links = $('a');
-
-			//debug
-			$(links).each(function(i, link) {
-				console.log($(link).text());
-			});
-			return links;
-		}
-	});
-};
 
 function logToFile(link) {
 	return;
 }
+
