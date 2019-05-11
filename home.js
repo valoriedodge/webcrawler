@@ -59,7 +59,7 @@ app.post('/submit',function(req,res,next){
   var context = {};
   var given_url = req.body.url;
   var pastURLs = [];
-  if (req.cookies) pastURLs = req.cookies["pastURLs"];
+  if (req.cookies["pastURLs"]) pastURLs = [...req.cookies["pastURLs"]];
   pastURLs.push({"url":given_url});
   res.cookie("pastURLs", pastURLs);
   context.graph = given_url;
