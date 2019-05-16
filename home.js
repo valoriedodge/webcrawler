@@ -35,11 +35,9 @@ app.get('/crawler',function(req,res,next){
   context.title = "Crawl the Web from a Starting URL"
   var pastURLs = [];
   if (req.cookies && req.cookies["pastURLs"]) {
-    // console.log(req.cookies["pastURLs"]);
     pastURLs = req.cookies["pastURLs"];
   }
   context.pastURLs = pastURLs;
-  // console.log(req.cookies);
   res.render('crawler',context);
 });
 
@@ -57,12 +55,17 @@ app.get('/crawler',function(req,res,next){
 
 app.post('/submit',function(req,res,next){
   var context = {};
+  var eventURL = "/stream?url=" + req.body.url + "&keyword=" + req.body.keyword + "&searchType=" + req.body.searchType + "&limit=" + req.body.maxDepth;
   var given_url = req.body.url;
   var pastURLs = [];
   if (req.cookies["pastURLs"]) pastURLs = [...req.cookies["pastURLs"]];
   pastURLs.push({"url":given_url});
   res.cookie("pastURLs", pastURLs);
-  context.graph = given_url;
+  context.eventurl = eventURL;
+  context.title = req.body.searchType + "-First Webcrawl for "+ req.body.url + " limit " + req.body.maxDepth;
+  if (req.body.keyword && req.body.keyword.trim() != "") {
+    context.keyword = "Keyword: " + req.body.keyword;
+  }
   res.render('graph',context);
 });
 
@@ -85,7 +88,7 @@ app.get('/stream',function(req,res,next){
   setInterval(function (){
     messageCount++;
     res.write('id: ' + messageCount + '\n');
-    res.write("data: " + randomString() + '\n\n'); // Note the extra newline
+    res.write("data: " + req.query.url + " " + req.query.keyword + " " + req.query.searchType + " " + req.query.limit + '\n\n'); // Note the extra newline
   }, 1000);
   setTimeout(function (){
     messageCount++;
@@ -95,11 +98,13 @@ app.get('/stream',function(req,res,next){
   }, 5000);
   // res.render('about',context);
 });
+
 app.get('/graph',function(req,res,next){
   var context = {};
   context.graph = "graph";
   res.render('graph', context);
 });
+
 app.get('/:graph',function(req,res,next){
   var context = {};
   var graph = req.params.graph;
@@ -113,6 +118,7 @@ app.get('/:graph',function(req,res,next){
     res.render('crawler', context);
   }
 });
+
 app.use(function(req,res){
   res.status(404);
   res.render('404');

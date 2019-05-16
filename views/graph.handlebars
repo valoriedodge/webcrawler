@@ -187,8 +187,15 @@
     </script>
 
   {{else}}
+    <div id="eventlink" style="display:none">{{eventurl}}</div>
+    <h3>{{title}}</h3>
+    {{#if keyword}}
+      {{keyword}}
+    {{/if}}
     <script type="text/javascript">
-      var source = new EventSource('/stream');
+      var link = document.getElementById("eventlink").innerHTML.replace(/&amp;/g, '&');
+      console.log(link);
+      var source = new EventSource(link);
 
       source.addEventListener('message', function(e) {
         console.log(e.data);
