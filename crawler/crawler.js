@@ -177,7 +177,7 @@ module.exports.depthFirst = function(url, limit, keyword) {
 			// Check if there are links to follow on page
 			if (links && links.length) {
 				var link = links[Math.floor(Math.random() * links.length)];	// get random link
-				console.log(link);
+				//console.log(link);
 	
 				// Update URLs
 				previousURL = url;
@@ -300,7 +300,7 @@ function getLinksFromQueue(queue, keyword, pagesVisited, pastURLs, limit, resolv
 	 */
 	function getLinks (url, previousURL, keyword, pagesVisited, pastURLs, limit, resolve) {
 					return visitPage(url, previousURL, keyword, pagesVisited, pastURLs).then(function (links) {
-					  	console.log(url);
+					  	//console.log(url);
 
 					  	// Check for exit conditions of crawler:
 					  	// Above depth limit, keyword found, max number of links reached.

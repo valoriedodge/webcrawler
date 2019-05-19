@@ -7,7 +7,7 @@ var session = require('express-session');
 var request = require('request');
 var cookieParser = require('cookie-parser');
 var crypto = require("crypto");
-// var cytoscape = require('cytoscape');
+var crawler = require('./crawler/crawler');
 
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -75,7 +75,7 @@ app.get('/about',function(req,res,next){
   res.render('about',context);
 });
 
-app.get('/stream',function(req,res,next){
+app.get('/stream', async function(req,res,next){
   var context = {};
   context.title = "About";
   res.writeHead(200, {
@@ -83,20 +83,20 @@ app.get('/stream',function(req,res,next){
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   });
+  
+  var depthFirstResults = await crawler.depthFirst(req.query.url, req.query.limit, null);
+  //var breadthFirstResults = await crawler.asyncBreadthFirst(req.query.url, req.query.limit, null);
+
   var messageCount = 0;
   res.write('\n');
-  setInterval(function (){
-    messageCount++;
-    res.write('id: ' + messageCount + '\n');
-    res.write("data: " + req.query.url + " " + req.query.keyword + " " + req.query.searchType + " " + req.query.limit + '\n\n'); // Note the extra newline
-  }, 1000);
-  setTimeout(function (){
-    messageCount++;
-    res.write('event: close\n');
-    res.write('id: ' + messageCount + '\n');
-    res.write("data: " + randomString() + '\n\n'); // Note the extra newline
-  }, 5000);
-  // res.render('about',context);
+  messageCount++;
+  var stringifiedData = JSON.stringify(depthFirstResults);
+  res.write('id: ' + messageCount + '\n');
+  res.write(`data: {"results": ${stringifiedData}}\n\n`);
+  messageCount++;
+  res.write('event: close\n');
+  res.write('id ' + messageCount + '\n');
+  res.write('data: ' + randomString() + '\n\n');
 });
 
 app.get('/graph',function(req,res,next){

@@ -5,15 +5,40 @@ form, li {
   text-align: left;
 }
 
-/* #cy {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    right: 0px;
-} */
+#main { 
+  margin:0;
+  position:fixed;
+  top:100px;
+  right:0;
+  bottom:0;
+  left:0;
+}
 
-#main { margin:0;position:fixed;top:30px;right:0;bottom:0;left:0; }
-.links line {stroke: #aaa;}
-/*     .nodes circle {pointer-events: all; stroke: none; stroke-width: 40px;} */
+.links line {
+  stroke: #aaa;
+  stroke-width: 2.5px;
+  stroke-opacity: 0.85;
+}
+
+#end-arrow {
+  fill: #aaa;
+}
+
+/*What is this pointer-events?*/
+.nodes circle {
+  pointer-events: all; 
+  stroke-width: 1.5px;
+  stroke: black;
+}
+
+#info {
+  line-height: 10px;
+  padding: 10px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#info #url {
+  color: red;
+}
