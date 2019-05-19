@@ -1,207 +1,253 @@
-{{#if graph}}
-    <h1>{{graph}}</h1>
-    <div id="main">
-      <svg height="500" width="900"></svg>
-    </div>
+<div id="eventlink" style="display:none">{{eventurl}}</div>
+<h3>{{title}}</h3>
+{{#if keyword}}
+{{keyword}}
+{{/if}}
+<div id="main">
+  <div id="info"></div>
+  <div id="canvas">
+    <svg></svg>
+  </div>
+</div>
+<script type="text/javascript">
+  var link = document.getElementById("eventlink").innerHTML.replace(/&amp;/g, '&');
+  var source = new EventSource(link);
 
-  <script>
-    // Dummy Data - Data must be in this format
-    window.onload = function(){ /*code here*/
-    const data = {
-      nodes: [
-        {site: 'site1.com', group: 0},
-        {site: 'site2.com', group: 1},
-        {site: 'site3.com', group: 1},
-        {site: 'site4.com', group: 1},
-        {site: 'site5.com', group: 1},
-        {site: 'site6.com', group: 2},
-        {site: 'site7.com', group: 2},
-        {site: 'site8.com', group: 2},
-        {site: 'site9.com', group: 2},
-        {site: 'site10.com', group: 2},
-        {site: 'site11.com', group: 2},
-        {site: 'site12.com', group: 2},
-        {site: 'site13.com', group: 2},
-        {site: 'site14.com', group: 2},
-        {site: 'site15.com', group: 2},
-        {site: 'site16.com', group: 2},
-        {site: 'site17.com', group: 2},
-      ],
-      links: [
-        {source: 'site1.com', target: 'site2.com'},
-        {source: 'site1.com', target: 'site3.com'},
-        {source: 'site1.com', target: 'site4.com'},
-        {source: 'site1.com', target: 'site5.com'},
-        {source: 'site2.com', target: 'site6.com'},
-        {source: 'site2.com', target: 'site7.com'},
-        {source: 'site2.com', target: 'site8.com'},
-        {source: 'site3.com', target: 'site9.com'},
-        {source: 'site3.com', target: 'site10.com'},
-        {source: 'site3.com', target: 'site11.com'},
-        {source: 'site4.com', target: 'site12.com'},
-        {source: 'site4.com', target: 'site13.com'},
-        {source: 'site4.com', target: 'site14.com'},
-        {source: 'site5.com', target: 'site15.com'},
-        {source: 'site5.com', target: 'site16.com'},
-        {source: 'site5.com', target: 'site17.com'},
-      ]
-    };
+  //Holds node connections
+  var linkedByIndex = {};
 
-    //Select svg element from html --> acts as container for graph
-    const svg = d3.select('svg');
-    const width = svg.attr('width');
-    const height = svg.attr('height');
-    const assignColor = d3.scaleOrdinal(d3.schemeCategory20);
+  //Data that drives the graph
+  var data = {
+    nodes: [],
+    links: [],
+  };
 
-    //Create a force simulation object --> forces that keep nodes apart
-    const simulation = d3.forceSimulation()
-    	.force('link', d3.forceLink().id(d => d.site))
-    	.force('charge', d3.forceManyBody().strength(-100))
-			.force('center', d3.forceCenter(width / 2, height / 2))
-    	.force('collision', d3.forceCollide(15))
+  //Select SVG element from html, acts as container for the graph
+  const svg = d3.select('svg');
+  //Gets the width and height of the inner browswer window
+  const width = window.innerWidth;
+  const height = window.innerHeight;
 
-    //Creates link group to append links to svg
-    const linkElements = svg.append('g')
-    	.attr('class', 'links')
-    	.selectAll('line')
-    	.data(data.links)
-    	.enter().append('line');
+  //Sets the container dimensions
+  svg
+    .attr('width', width)
+    .attr('height', height)
 
-    //Node group, appends circle to svg for each node of data
-    const nodeElements = svg.append('g')
-    	.attr('class', 'nodes')
-    	.selectAll('circle')
-    	.data(data.nodes)
-    	.enter().append('circle')
-    	.attr('r', 10)
-    	.attr('fill', d => assignColor(d.group))
-    	.call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
+  //Size of the nodes
+  const nodeRadius = 10;
+  //Color scheme for the nodes
+  const nodeColor = d3.scaleOrdinal(d3.schemeSet2);
 
-    //Text group, creates text element for each piece of data
-    const textElements = svg.append('g')
-    	.selectAll('text')
-    	.data(data.nodes)
-    	.enter().append('text')
-    		.text(node => node.site)
-    		.attr('font-size', 12)
-    		.attr('dx', 15)
-    		.attr('dy', 4);
+  //Create forces to separate nodes
+  const linkForce = d3.forceLink().id(d => d.site).distance(20).strength(0.3);
+  const chargeForce = d3.forceManyBody().strength(-200);
+  const centerForce = d3.forceCenter(width / 2, height / 2);
+  const collisionForce = d3.forceCollide(25);
+  //const variousForces = d3.
 
-    //start the simulation to draw nodes to screen
-    //For each piece of data(node) run ticked function to place nodes
-    simulation
-    	.nodes(data.nodes)
-    	.on('tick', ticked); //tick represents each piece of data
-
-    //draws links between nodes
-    simulation
-			.force('link')
-    	.links(data.links);
+  //Create D3 simulation object where forces will be applied
+  const simulation = d3.forceSimulation();
 
 
-    function ticked() {
-      linkElements
-      	.attr('x1', d => d.source.x)
-      	.attr('y1', d => d.source.y)
-      	.attr('x2', d => d.target.x)
-      	.attr('y2', d => d.target.y);
-      nodeElements
-      	.attr('cx', d => d.x)
-      	.attr('cy', d => d.y);
-      textElements
-       	.attr('x', node => node.x)
-       	.attr('y', node => node.y)
-    }
+  //Append the forces to the simulation object
+  simulation
+    .force('link', linkForce)
+    .force('charge', chargeForce)
+    .force('center', centerForce)
+    .force('collision', collisionForce)
 
 
-    /********************************************
-    * Physics functions for moving graph around
-    *********************************************/
-    function dragstarted(d) {
-      if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-		}
+  //Create group wrapper for entire graph, creating a group that will contain all other groups within the svg
+  const graphWrapper = svg.append('g');
 
-		function dragged(d) {
-  		d.fx = d3.event.x;
-			d.fy = d3.event.y;
-		}
+  //Group links together in graphWrapper
+  let linkElements = graphWrapper.append('g')
+    .attr('class', 'links')
+    .selectAll('line')
+    .data(data.links)
+    .enter().append('line') //enter selection, append a new line for each virtual element
 
-		function dragended(d) {
-      if (!d3.event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-    }
+  //Group all node elemenst together in graphWrapper
+  let nodeElements = graphWrapper.append('g')
+    .attr('class', 'nodes')
+    .selectAll('circle')
+    .data(data.nodes)
+    .enter().append('circle')
+    .attr('r', nodeRadius - .75)
+    .attr('fill', d => nodeColor(d.group))
+    .on('click', d => window.open(d.url, '_blank')) //Open link in new tab after clicking node
+    .on('mouseover.fade', fade(.1))
+    .on('mouseover.info', displayInfo)
+    .on('mouseout.fade', fade(1))
+    .on('mouseover.increaseNodeSize', increaseNodeSize)
+    .on('mouseout.decreaseNodeSize', decreaseNodeSize)
+    .call(d3.drag()
+      .on('start', dragStarted)
+      .on('drag', dragged)
+      .on('end', dragEnded));
+
+  svg.call(d3.zoom()
+    .on('zoom', zoomAction));
+
+  simulation
+    .nodes(data.nodes)
+    .on('tick', tickAction);
+
+  simulation
+    .force('link')
+    .links(data.links);
+
+  data.links.forEach(d => {
+    linkedByIndex[`${d.source.index},${d.target.index}`] = 1;
+  });
+
+  /*Functions to get everything moving*/
+  //Function that runs for each node, sets positions of links and nodes
+  function tickAction() {
+    linkElements
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    nodeElements
+      .attr('cx', d => d.x = Math.max(nodeRadius, Math.min(width - nodeRadius, d.x)))
+      .attr('cy', d => d.y = Math.max(nodeRadius, Math.min(height - nodeRadius, d.y)));
   }
-  </script>
-    <!-- <div id="cy"></div>
-    <script>
-    window.onload = function(){ /*code here*/
-    var cy = cytoscape({
 
-        container: document.getElementById('cy'), // container to render in
+  /*
+  * Set of functions that handle node dragging events
+  */
+  function dragStarted(d) {
+    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
 
-        elements: [ // list of graph elements to start with
-          { // node a
-            data: { id: 'a' }
-          },
-          { // node b
-            data: { id: 'b' }
-          },
-          { // edge ab
-            data: { id: 'ab', source: 'a', target: 'b' }
-          }
-        ],
+  function dragged(d) {
+    d.fx = d3.event.x;
+    d.fy = d3.event.y;
+  }
 
-        style: [ // the stylesheet for the graph
-          {
-            selector: 'node',
-            style: {
-              'background-color': '#666',
-              'label': 'data(id)'
-            }
-          },
+  function dragEnded(d) {
+    if (!d3.event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
 
-          {
-            selector: 'edge',
-            style: {
-              'width': 3,
-              'line-color': '#ccc',
-              'target-arrow-color': '#ccc',
-              'target-arrow-shape': 'triangle'
-            }
-          }
-        ],
+  //add on doubleclick listener to release nodes
+  function releaseNode(d) {
+    d.fx = null;
+    d.fy = null;
+  }
 
-        layout: {
-          name: 'grid',
-          rows: 1
-        }
+  //Handles pan/zoom event for graph
+  function zoomAction() {
+    graphWrapper.attr('transform', d3.event.transform);
+  }
 
+  function displayInfo(d) {
+    const infoBox = d3.select('#info')
+      .html(`<h2>Name: ${d.site}</h2><br><h3>URL: <span id="url">${d.url}</span></h3>`);
+  }
+
+  function isConnected(a, b) {
+    return linkedByIndex[`${a.index},${b.index}`] || linkedByIndex[`${b.index},${a.index}`] || a.index === b.index;
+  }
+
+  function fade(opacity) {
+    return function (d) {
+      nodeElements.style('stroke-opacity', function (o) {
+        let thisOpacity = isConnected(d, o) ? 1 : opacity;
+        this.setAttribute('fill-opacity', thisOpacity);
+        this.setAttribute('stroke-width', '1px');
+        return thisOpacity;
       });
-    } -->
-    </script>
+      linkElements.style('stroke-opacity', o => (o.source === d || o.target === d ? 1 : opacity));
+    };
+  }
 
-  {{else}}
-    <div id="eventlink" style="display:none">{{eventurl}}</div>
-    <h3>{{title}}</h3>
-    {{#if keyword}}
-      {{keyword}}
-    {{/if}}
-    <script type="text/javascript">
-      var link = document.getElementById("eventlink").innerHTML.replace(/&amp;/g, '&');
-      console.log(link);
-      var source = new EventSource(link);
+  function increaseNodeSize(d) {
+    const node = d3.select(this)
+      .transition()
+      .duration(750)
+      .attr('r', 16);
+  }
 
-      source.addEventListener('message', function(e) {
-        console.log(e.data);
-      }, false);
-      source.addEventListener('close', function(e) {
-        source.close();
-      }, false);
-    </script>
-  {{/if}}
+  function decreaseNodeSize() {
+    const node = d3.select(this)
+      .transition()
+      .duration(750)
+      .attr('r', nodeRadius);
+  }
+
+  //Update function
+  //Everytime a new piece of data is added
+  function update() {
+    linkElements = linkElements.data(data.links);
+    linkElements.exit().remove();
+    linkElements = linkElements.enter().append('line')
+      .attr('class', 'links')
+      .merge(linkElements);
+
+    nodeElements = nodeElements.data(data.nodes);
+    nodeElements.exit().remove();
+    nodeElements = nodeElements.enter().append('circle')
+      .attr('class', 'nodes')
+      .attr('r', nodeRadius - .75)
+      .attr('fill', d => nodeColor(d.group))
+      .on('click', d => window.open(d.url, '_blank'))
+      .call(d3.drag()
+        .on('start', dragStarted)
+        .on('drag', dragged)
+        .on('end', dragEnded))
+      .merge(nodeElements);
+
+    //Handle mouse events over nodes
+    nodeElements
+      .on('mouseover.fade', fade(.1))
+      .on('mouseover.info', displayInfo)
+      .on('mouseover.increaseNodeSize', increaseNodeSize)
+      .on('mouseout.fade', fade(1))
+      .on('mouseout.decreaseNodeSize', decreaseNodeSize);
+
+    simulation
+      .nodes(data.nodes)
+      .force('link')
+      .links(data.links);
+
+    svg.call(d3.zoom()
+      .on('zoom', zoomAction));
+
+    //restart the simulation
+    simulation.alphaTarget(0.70).restart();
+  }
+
+  // Listening to server for data
+  source.addEventListener('message', function (e) {
+    var graphData = JSON.parse(e.data);
+    console.log('Parsed graphData: ', graphData);
+
+    //Temporarily hold new nodes and links between nodes
+    const newNodes = [];
+    const newLinks = [];
+
+    //create node and link object that d3 understands
+    graphData.results.forEach(link => {
+      newNodes.push({ site: link.url, url: link.url, group: link.group, keyword: link.keyword });
+      newLinks.push({ source: `${link.prevURL ? link.prevURL : link.url}`, target: link.url });
+    });
+
+    //Add new data to old data
+    data.nodes = [...data.nodes, ...newNodes];
+    data.links = [...data.links, ...newLinks];
+
+    //call update to add new data to the graph
+    update();
+
+    //Add new link connections to linkedByIndex object
+    newLinks.forEach(link => { linkedByIndex[`${link.source.index},${link.target.index}`] = 1; });
+  }, false);
+  source.addEventListener('close', function (e) {
+    source.close();
+  }, false);
+</script>
