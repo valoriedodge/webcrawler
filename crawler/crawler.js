@@ -68,8 +68,11 @@ function formatLinks(links, currentPage) {
 		// Convert relative paths to absolute
 		if (!isUrlAbsolutePath(url)) 
 			url = currentPage + url;
-
-		uniqueLinks.add(url);
+		
+		// Check if valid protocol
+		var path = url.split('/');
+		if (path[0] == 'http:' || path[0] == 'https:')
+			uniqueLinks.add(url);
 	});
 
 	// Return an array from the set of unique links
