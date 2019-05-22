@@ -114,8 +114,8 @@ function visitPage(url, previousURL, keyword, pagesVisited, pastURLs) {
 			} else {
 				$ = cheerio.load(body);
 				
-				// Search for keyword on page
-				let keywordFound = findKeyword($, keyword);
+				// Search for keyword on page, if one is specified
+				let keywordFound = (keyword) findKeyword($, keyword) ? : false;
 
 				// Get links on page and format them 
 				links = $('a');
