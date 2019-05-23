@@ -72,6 +72,11 @@ function formatLinks(links, currentPage) {
 		if (!isUrlAbsolutePath(url))
 			url = currentPage + url;
 
+		// Check if valid protocol
+		var path = url.split('/');
+		if (path[0] == 'http:' || path[0] == 'https:')
+			uniqueLinks.add(url);
+		
 		uniqueLinks.add(url);
 	});
 
