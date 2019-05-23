@@ -7,6 +7,7 @@ var session = require('express-session');
 var request = require('request');
 var cookieParser = require('cookie-parser');
 var crypto = require("crypto");
+var crawler = require('./crawler/crawler');
 // var cytoscape = require('cytoscape');
 
 app.use(cookieParser());
