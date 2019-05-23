@@ -85,13 +85,13 @@ app.get('/stream',function(req,res,next){
   });
   
   /** LOGGING **/
-  var fileName = crypto.randomBytes(16).toString("hex") + '.log';
+  var fileName = new Date().toISOString().replace('.',':') + '.log';
   var stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
   stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
   var depthFirstResults = await crawler.depthFirst(req.query.url, req.query.limit, null, stream);
   stream.end();
   
-  fileName = crypto.randomBytes(16).toString("hex") + '.log';
+  fileName = new Date().toISOString().replace('.',':') + '.log';
   stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
   stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
   var breadthFirstResults = await crawler.asyncBreadFirst(req.query.url, req.query.limit, null, stream);
