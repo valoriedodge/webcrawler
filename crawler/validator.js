@@ -27,7 +27,6 @@ module.exports.isUrl = function (url) {
 					'User-Agent': 'request'
 				}
 			};
-
 			// Check if there is a response when requesting the URL
 			request.get(options, function (err, res, body) {
 				if (err) {
