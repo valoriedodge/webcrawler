@@ -6,15 +6,18 @@
 const request = require('request');
 const cheerio = require('cheerio');
 var Promise = require('bluebird');
-Promise.config({cancellation: true});
 const fs = require('fs');
+
+Promise.config({
+	cancellation: true
+});
 
 const MAX_LINKS = 1000;
 const USER_AGENTS = [
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36", 				// Chrome
-	"Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0", 																// Firefox
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A", 			// Safari
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/14.14931" 	// Edge
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36", // Chrome
+	"Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0", // Firefox
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A", // Safari
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/14.14931" // Edge
 ]
 
 /**
@@ -22,8 +25,8 @@ const USER_AGENTS = [
  * @param {string} message - exception message.
  */
 function StopCrawler(message) {
-   this.message = 'Crawler Stopped: ' + message;
-   this.name = 'StopCrawler';
+	this.message = 'Crawler Stopped: ' + message;
+	this.name = 'StopCrawler';
 }
 
 /**
@@ -58,7 +61,7 @@ function isUrlAbsolutePath(url) {
 function formatLinks(links, currentPage) {
 	var uniqueLinks = new Set();
 
-	$(links).each(function(i, link) {
+	$(links).each(function (i, link) {
 		var url = $(link).attr('href');
 
 		// Ignore links to elements
@@ -66,7 +69,7 @@ function formatLinks(links, currentPage) {
 			return true;
 
 		// Convert relative paths to absolute
-		if (!isUrlAbsolutePath(url)) 
+		if (!isUrlAbsolutePath(url))
 			url = currentPage + url;
 
 		uniqueLinks.add(url);
@@ -83,8 +86,11 @@ function formatLinks(links, currentPage) {
  * @param {Array.<Object>} queue - data structure to store URLs.
  */
 function addLinksToQueue(links, url, queue) {
-	links.forEach(function(link) {
-		queue.push({link: link, prevURL: url});
+	links.forEach(function (link) {
+		queue.push({
+			link: link,
+			prevURL: url
+		});
 	});
 }
 
@@ -94,47 +100,46 @@ function addLinksToQueue(links, url, queue) {
  * @param {string} previousURL - URL that pointed to page being visited.
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @param {Array.<Object>} pagesVisited - array that stores info of pages being visited.
- * @param {Array.<string>} pastURLs - array of all URLs that have been visited.
+ * @param {stream.Writable} stream - writes data to file.
  * @return {Promise.<Array.<string>>} array of links found on webpage.
  */
-function visitPage(url, previousURL, keyword, pagesVisited, pastURLs) {
-	//console.log(url);
-	pastURLs.push(url);
+function visitPage(url, previousURL, keyword, pagesVisited, stream) {
 	// Set user-agent to prevent websites from blocking the crawler
 	var userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 	var customRequest = request.defaults({
-		headers: {'User-Agent': userAgent}
-	});
+			headers: {
+				'User-Agent': userAgent
+			}
+		});
 
-	return new Promise(function(resolve, reject, onCancel) {
+	return new Promise(function (resolve, reject, onCancel) {
 		// Get html body from url
-		customRequest.get(url, function(err, res, body) {
-			if(err) {
+		customRequest.get(url, function (err, res, body) {
+			if (err) {
 				reject(err);
 			} else {
 				$ = cheerio.load(body);
-				
+
 				// Search for keyword on page
 				let keywordFound = findKeyword($, keyword);
 
-				// Get links on page and format them 
+				// Get links on page and format them
 				links = $('a');
 				links = formatLinks(links, url);
-				
-				// Remove links that point to pages already visited
-				links = links.filter(x => !pastURLs.includes(x));
 
 				// Get group number of url, where group number is the depth of the crawler
 				// e.g. starting url = 0, links on starting url = 1, links of those links = 2
 				let group = 0;
 				if (previousURL != null) {
-					let pos = pagesVisited.map(function(x) {return x.url;}).indexOf(previousURL);
+					let pos = pagesVisited.map(function (x) {
+							return x.url;
+						}).indexOf(previousURL);
 					group = pagesVisited[pos].group + 1;
 				}
-				
+
 				// Get title of webpage
 				let title = $("title").text();
-				
+
 				// Create object of page information
 				pagesVisited.push({
 					url: url,
@@ -144,13 +149,15 @@ function visitPage(url, previousURL, keyword, pagesVisited, pastURLs) {
 					group: group
 				})
 
+				// Write to file
+				logToFile(pagesVisited[pagesVisited.length - 1], stream); 
+				
 				resolve(links);
-
-				onCancel(function() {
-					console.log("aborted");
-		            customRequest.abort();
-		        });
 			}
+		});
+		onCancel(function () {
+			console.log("aborted");
+			customRequest.abort();
 		});
 	})
 }
@@ -162,44 +169,42 @@ function visitPage(url, previousURL, keyword, pagesVisited, pastURLs) {
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @return {Promise.<Array.<Object>>} array of objects with links visited.
  */
-module.exports.depthFirst = function(url, limit, keyword) {	
+module.exports.depthFirst = function (url, limit, keyword) {
 	var pagesVisited = [];
-	var pastURLs = [url];
 	var previousURL = null;
 
-	return new Promise( async function(resolve, reject) {
+	return new Promise(async function (resolve, reject) {
 
 		for (let numLinks = 1; numLinks <= limit; numLinks++) {
 
 			// Visit page to get all links and check if the keyword appears on the page
 			try {
-				links = await visitPage(url, previousURL, keyword, pagesVisited, pastURLs);
-			} catch(error) {
+				links = await visitPage(url, previousURL, keyword, pagesVisited, stream);
+			} catch (error) {
 				console.error(error);
 			}
-				
+
 			// Check if there are links to follow on page
 			if (links && links.length) {
-				var link = links[Math.floor(Math.random() * links.length)];	// get random link
+				var link = links[Math.floor(Math.random() * links.length)]; // get random link
 				console.log(link);
-	
+
 				// Update URLs
 				previousURL = url;
 				url = link;
-				pastURLs.push(url);
 			} else {
-				error = 'No links to follow'; 
+				error = 'No links to follow';
 				reject(error);
 			}
 
-			// Once the limit is reached or the keyword is found, stop the crawler and 
+			// Once the limit is reached or the keyword is found, stop the crawler and
 			// resolve the promise
 			if (numLinks == limit || pagesVisited[pagesVisited.length - 1].keyword) {
 				resolve(pagesVisited);
 				break;
 			}
 		}
-	})	
+	})
 }
 
 /**
@@ -209,16 +214,15 @@ module.exports.depthFirst = function(url, limit, keyword) {
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @return {Promise.<Array.<Object>>} array of objects with links visited.
  */
-module.exports.asyncBreadthFirst = function(url, limit, keyword) {
+module.exports.asyncBreadthFirst = function (url, limit, keyword) {
 	var queue = [];
 	var pagesVisited = [];
-	var pastURLs = [url];
 	var previousURL = null;
 
-	return new Promise( async function(resolve, reject) {
+	return new Promise(async function (resolve, reject) {
 		// Get webpage information of starting URL, then add all its links to a queue.
 		try {
-			var links = await visitPage(url, previousURL, keyword, pagesVisited, pastURLs);
+			var links = await visitPage(url, previousURL, keyword, pagesVisited, stream);
 		} catch (error) {
 			console.error(error);
 		}
@@ -228,7 +232,7 @@ module.exports.asyncBreadthFirst = function(url, limit, keyword) {
 		// Then add those links to the queue. Repeat to desired depth limit set by user.
 		for (let i = 0; i < limit; ++i) {
 			try {
-				await getLinksFromQueue(queue, keyword, pagesVisited, pastURLs, limit, resolve);
+				await getLinksFromQueue(queue, keyword, pagesVisited, limit, resolve);
 			} catch (error) {
 				console.error(error);
 			}
@@ -246,21 +250,19 @@ module.exports.asyncBreadthFirst = function(url, limit, keyword) {
 	});
 }
 
-
 /**
  * Iterates through a queue to get all links from the URL, then adds those
  * links to the end of the queue. This repeats until an exit condition is met.
  * @param {Array.<Object>} queue - links with the URL that pointed to said link.
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @param {Array.<Object>} pageVisited - array that stores info of pages being visited.
- * @param {Array.<string>} pastURLs - array of links previously visited.
  * @param {number} limit - number of pages to visit.
  * @param {resolve} resolve - function that resolves the original promise.
  * @return {Promise} resolves when all pages are visited in the queue.
  */
-function getLinksFromQueue(queue, keyword, pagesVisited, pastURLs, limit, resolve) {
-	var tempQueue = queue.slice(0);		// Copy queue into temporary array
-	queue.length = 0;					// Empty queue
+function getLinksFromQueue(queue, keyword, pagesVisited, limit, resolve) {
+	var tempQueue = queue.slice(0); // Copy queue into temporary array
+	queue.length = 0; // Empty queue
 
 	// Prevent the crawler from getting too many links
 	var size = (tempQueue.length > MAX_LINKS) ? MAX_LINKS : tempQueue.length;
@@ -270,26 +272,26 @@ function getLinksFromQueue(queue, keyword, pagesVisited, pastURLs, limit, resolv
 	// Each page that is visited returns a promise that is added to an array.
 	var promises = [];
 	for (let i = 0; i < size; ++i) {
-		var result = getLinks(tempQueue[i].link, tempQueue[i].prevURL, keyword, pagesVisited, pastURLs, limit, resolve).catch(e => {
-				if (e.message == 'max depth reached' || 
+		var result = getLinks(tempQueue[i].link, tempQueue[i].prevURL, keyword, pagesVisited, limit, resolve).catch(e => {
+				if (e.message == 'max depth reached' ||
 					e.message == 'keyword found' ||
 					e.message == 'max number of links reached') {
 					throw new StopCrawler(e.message);
 				}
-	  		});
-	    promises.push(result);
+			});
+		promises.push(result);
 	}
 
 	// When all promises are returned, resolve the original promise.
-	return Promise.all(promises).then(function() {
-	    console.log("Done");
+	return Promise.all(promises).then(function () {
+		console.log("Done");
 	}).catch(e => {
-			// If an error occurs, resolve the incomplete data and cancel the
-			// remaining promises.
-  			console.log(e.message);
-  			resolve(pagesVisited);
-  			promises.forEach(p => p.cancel());
-  		});
+		// If an error occurs, resolve the incomplete data and cancel the
+		// remaining promises.
+		console.log(e.message);
+		resolve(pagesVisited);
+		promises.forEach(p => p.cancel());
+	});
 
 	/**
 	 * Gets all links found on webpage and adds them to a queue.
@@ -297,31 +299,30 @@ function getLinksFromQueue(queue, keyword, pagesVisited, pastURLs, limit, resolv
 	 * @param {Array.<Object>} queue - links with the URL that pointed to said link.
 	 * @param {string} keyword - keyword that stops crawler if found on a page.
 	 * @param {Array.<Object>} pageVisited - array that stores info of pages being visited.
-	 * @param {Array.<string>} pastURLs - array of links previously visited.
 	 * @param {number} limit - number of pages to visit.
 	 * @param {resolve} resolve - function that resolves the original promise.
 	 * @return {function} adds links found on webpage to queue.
 	 */
-	function getLinks (url, previousURL, keyword, pagesVisited, pastURLs, limit, resolve) {
-					return visitPage(url, previousURL, keyword, pagesVisited, pastURLs).then(function (links) {
-					  	console.log(url);
+	function getLinks(url, previousURL, keyword, pagesVisited, limit, resolve) {
+		return visitPage(url, previousURL, keyword, pagesVisited, stream).then(function (links) {
+			//console.log(url);
 
-					  	// Check for exit conditions of crawler:
-					  	// Above depth limit, keyword found, max number of links reached.
-					  	if (pagesVisited[pagesVisited.length - 1].group > limit) {
-							resolve(pagesVisited);
-							throw new StopCrawler('max depth reached');
-					  	} else if (pagesVisited[pagesVisited.length - 1].keyword) {
-							resolve(pagesVisited);
-							throw new StopCrawler('keyword found');
-						} else if (pagesVisited.length >= MAX_LINKS) {
-							resolve(pagesVisited);
-							throw new StopCrawler('max number of links reached');
-						} 
+			// Check for exit conditions of crawler:
+			// Above depth limit, keyword found, max number of links reached.
+			if (pagesVisited[pagesVisited.length - 1].group > limit) {
+				resolve(pagesVisited);
+				throw new StopCrawler('max depth reached');
+			} else if (pagesVisited[pagesVisited.length - 1].keyword) {
+				resolve(pagesVisited);
+				throw new StopCrawler('keyword found');
+			} else if (pagesVisited.length >= MAX_LINKS) {
+				resolve(pagesVisited);
+				throw new StopCrawler('max number of links reached');
+			}
 
-					    return addLinksToQueue(links, url, queue);
-					  });
-					}
+			return addLinksToQueue(links, url, queue);
+		});
+	}
 
 }
 
@@ -332,26 +333,24 @@ function getLinksFromQueue(queue, keyword, pagesVisited, pastURLs, limit, resolv
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @return {Promise.<Array.<Object>>} array of objects with links visited.
  */
-module.exports.breadthFirst = function(url, limit, keyword) {
+module.exports.breadthFirst = function (url, limit, keyword) {
 	var queue = [];
 	var pagesVisited = [];
-	var pastURLs = [url];
 	var previousURL = null;
 
-	return new Promise( async function(resolve, reject) {
+	return new Promise(async function (resolve, reject) {
 		try {
-			var links = await visitPage(url, previousURL, keyword, pagesVisited, pastURLs);
+			var links = await visitPage(url, previousURL, keyword, pagesVisited, stream);
 		} catch (error) {
 			console.error(error);
 		}
 		addLinksToQueue(links, url, queue);
-		
 		while (true) {
 			// Check if depth surpassed the limit or if the keyword was found.
-			// If so, stop crawler and resolve promise. 
+			// If so, stop crawler and resolve promise.
 			if (pagesVisited[pagesVisited.length - 1].group > limit ||
 				pagesVisited[pagesVisited.length - 1].keyword) {
-					
+
 				resolve(pagesVisited);
 				break;
 			} else {
@@ -359,13 +358,23 @@ module.exports.breadthFirst = function(url, limit, keyword) {
 					// Get next URL to visit
 					previousURL = queue[0].prevURL;
 					url = queue.shift().link;
-					pastURLs.push(url);
-				
+
 					// Add links to queue asynchronously to speed up crawler
-					links = await visitPage(url, previousURL, keyword, pagesVisited, pastURLs);
+					links = await visitPage(url, previousURL, keyword, pagesVisited, stream);
 					addLinksToQueue(links, url, queue);
 				}
 			}
 		}
 	});
+}
+
+/**
+ * Logs data to file.
+ * @param {Array.<Object>} data - array of objects containing page info.
+ * @param {stream.Writable} stream - file stream to log data.
+ */
+function logToFile(data, stream) {
+	var log = new Date().toISOString() + '\t' + data.title + '\t' + data.url +
+		'\t' + data.keyword + '\t' + data.group + '\n';
+	stream.write(log);
 }
