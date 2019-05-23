@@ -83,6 +83,21 @@ app.get('/stream',function(req,res,next){
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   });
+  
+  /** LOGGING **/
+  var fileName = crypto.randomBytes(16).toString("hex");
+  var stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
+  stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
+  var depthFirstResults = await crawler.depthFirst(req.query.url, req.query.limit, null, stream);
+  stream.end();
+  
+  fileName = crypto.randomBytes(16).toString("hex");
+  stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
+  stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
+  var breadthFirstResults = await crawler.asyncBreadFirstFirst(req.query.url, req.query.limit, null, stream);
+  stream.end();
+  /** END LOGGING **/
+  
   var messageCount = 0;
   res.write('\n');
   setInterval(function (){
