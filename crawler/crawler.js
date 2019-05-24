@@ -174,7 +174,7 @@ function visitPage(url, previousURL, keyword, pagesVisited, stream) {
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @return {Promise.<Array.<Object>>} array of objects with links visited.
  */
-module.exports.depthFirst = function (url, limit, keyword) {
+module.exports.depthFirst = function (url, limit, keyword, stream) {
 	var pagesVisited = [];
 	var previousURL = null;
 
@@ -219,7 +219,7 @@ module.exports.depthFirst = function (url, limit, keyword) {
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @return {Promise.<Array.<Object>>} array of objects with links visited.
  */
-module.exports.asyncBreadthFirst = function (url, limit, keyword) {
+module.exports.asyncBreadthFirst = function (url, limit, keyword, stream) {
 	var queue = [];
 	var pagesVisited = [];
 	var previousURL = null;

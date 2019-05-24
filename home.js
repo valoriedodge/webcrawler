@@ -8,6 +8,7 @@ var request = require('request');
 var cookieParser = require('cookie-parser');
 var crypto = require("crypto");
 var crawler = require('./crawler/crawler');
+const fs = require('fs');
 // var cytoscape = require('cytoscape');
 
 app.use(cookieParser());
@@ -67,6 +68,39 @@ app.post('/submit',function(req,res,next){
   if (req.body.keyword && req.body.keyword.trim() != "") {
     context.keyword = "Keyword: " + req.body.keyword;
   }
+  
+    /** LOGGING **/
+  var fileName = new Date().toISOString().replace(/[.:]/g,'-') + '.log';
+  fs.appendFile('logs/' + fileName, 'timestamp\ttitle\turl\tkeywordFound\tgroup\n', function (err) {
+	  if (err) {
+		  console.log('oh no');
+		  throw err;
+	  }
+	  console.log('File is created successfully.');
+	    var stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
+	  //stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
+	  crawler.depthFirst('https://www.yahoo.com', 10, null, stream)
+		.then(data => {
+			console.log("done");
+		}).catch(err => {
+			console.log(err);
+		});
+	  
+	});
+
+  /*
+  fileName = new Date().toISOString().replace('.',':') + '.log';
+  stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
+  stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
+  crawler.asyncBreadFirst('www.yahoo.com', 2, null, stream)
+  	.then(data => {
+		console.log("done");
+	}).catch(err => {
+		console.log(err);
+	});
+  stream.end();
+  /** END LOGGING **/
+  
   res.render('graph',context);
 });
 
@@ -85,19 +119,7 @@ app.get('/stream',function(req,res,next){
     'Connection': 'keep-alive'
   });
   
-  /** LOGGING **/
-  var fileName = new Date().toISOString().replace('.',':') + '.log';
-  var stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
-  stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
-  var depthFirstResults = await crawler.depthFirst(req.query.url, req.query.limit, null, stream);
-  stream.end();
-  
-  fileName = new Date().toISOString().replace('.',':') + '.log';
-  stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
-  stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
-  var breadthFirstResults = await crawler.asyncBreadFirst(req.query.url, req.query.limit, null, stream);
-  stream.end();
-  /** END LOGGING **/
+
   
   var messageCount = 0;
   res.write('\n');
