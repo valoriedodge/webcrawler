@@ -77,6 +77,82 @@ app.get('/about',function(req,res,next){
   res.render('about',context);
 });
 
+function depthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount){
+  var found = false;
+  var currentGroup = limit;
+  var options = {
+    uri: currentURL,
+    transform: function (body) {
+        return cheerio.load(body);
+    }
+  };
+  rp(options) // call to request promise
+  .then(function ($) {
+        messageCount++;
+        var visitedPage = se.formatLinks(currentURL, group, keyword, $);
+        // Send the data to the browser
+        var tosend = {};
+        tosend[currentURL] = visitedPage;
+        res.write('id: ' + messageCount + '\n');
+        res.write("data: " + JSON.stringify(tosend) + '\n\n'); // Note the extra newline
+
+        // Stop the loop if the keyword was found
+        if(visitedPage['keyword']) found = true;
+        // If the group we are on is less than the limit, add its links to those to be searched
+        if (group < limit){
+          for(let i=0; i< visitedPage['links'].length; i++){
+            if(!allURLS.has(visitedPage['links'][i])){
+              URLS[group + 1].push(visitedPage['links'][i]);
+              allURLS.add(visitedPage['links'][i]);
+            }
+          }
+        }
+        for(let i=0; i<URLS.length; i++){
+          console.log(URLS[i].length);
+        }
+        // Check for more links in the current group to visit
+        while (currentGroup > 0 && URLS[currentGroup].length == 0){
+          currentGroup--;
+        }
+        // We have reached the limit or we found the keyword so we can close the SSE connection
+        if(currentGroup <= 0 || found == true){
+          console.log("ending");
+          res.write('event: close\n');
+          res.write('id: ' + messageCount + '\n');
+          res.write("data: no more links" + '\n\n'); // Note the extra newline
+          res.end();
+        }
+        else{
+          var idx = Math.floor(Math.random() * URLS[currentGroup].length)
+          currentURL = URLS[currentGroup].splice(idx,1)[0];
+          console.log(currentURL);
+          depthSearch(res, currentURL, URLS, allURLS, keyword, currentGroup, limit, messageCount);
+        }
+  })
+  .catch(function (err) {
+      // Crawling or Cheerio failed
+      // console.log(err);
+      // Check for more links in the current group to visit
+      while (currentGroup > 0 && URLS[currentGroup].length == 0){
+        currentGroup--;
+      }
+      // We have reached the limit or we found the keyword so we can close the SSE connection
+      if(currentGroup <= 0 || found == true){
+        console.log("ending");
+        res.write('event: close\n');
+        res.write('id: ' + messageCount + '\n');
+        res.write("data: no more links" + '\n\n'); // Note the extra newline
+        res.end();
+      }
+      else{
+        var idx = Math.floor(Math.random() * URLS[currentGroup].length)
+        currentURL = URLS[currentGroup].splice(idx,1)[0];
+        console.log(currentURL);
+        depthSearch(res, currentURL, URLS, allURLS, keyword, currentGroup, limit, messageCount);
+      }
+  });
+}
+
 function breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount){
   var found = false;
   var options = {
@@ -175,20 +251,12 @@ app.get('/stream',function(req,res,next){
     breadthSearch(res, currentURL, URLS, allURLS, req.query.keyword, group, limit, messageCount);
   }
   else if (req.query.searchType == 'Depth') {
-    while (limit >0){
-      limit--;
-      rp(options)
-        .then(function ($) {
-              messageCount++;
-              res.write('id: ' + messageCount + '\n');
-              res.write("data: " + JSON.stringify(se.formatLinks(req.query.url, group, "check", req.query.keyword, $)) + '\n\n'); // Note the extra newline
-              group++;
-        })
-        .catch(function (err) {
-            // Crawling or Cheerio failed
-            console.log(err);
-        });
-      }
+    // group = URLS.length -1;
+    depthSearch(res, currentURL, URLS, allURLS, req.query.keyword, group, limit, messageCount);
+  }else{
+    res.write('event: close\n');
+     res.write('id: ' + messageCount + '\n');
+     res.write("data: no valid search type given" + '\n\n'); // Note the extra newline
   }
 
   // setInterval(function (){
@@ -198,9 +266,7 @@ app.get('/stream',function(req,res,next){
   // }, 1000);
   // setTimeout(function (){
   //   messageCount++;
-  //   res.write('event: close\n');
-  //   res.write('id: ' + messageCount + '\n');
-  //   res.write("data: " + randomString() + '\n\n'); // Note the extra newline
+  //
   // }, 5000);
   // res.render('about',context);
 });
