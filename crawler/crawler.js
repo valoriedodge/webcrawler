@@ -66,7 +66,7 @@ function formatLinks(links, currentPage) {
 			return true;
 
 		// Convert relative paths to absolute
-		if (!isUrlAbsolutePath(url)) 
+		if (!isUrlAbsolutePath(url))
 			url = currentPage + url;
 
 		uniqueLinks.add(url);
@@ -113,14 +113,14 @@ function visitPage(url, previousURL, keyword, pagesVisited, pastURLs) {
 				reject(err);
 			} else {
 				$ = cheerio.load(body);
-				
+
 				// Search for keyword on page
 				let keywordFound = findKeyword($, keyword);
 
-				// Get links on page and format them 
+				// Get links on page and format them
 				links = $('a');
 				links = formatLinks(links, url);
-				
+
 				// Remove links that point to pages already visited
 				links = links.filter(x => !pastURLs.includes(x));
 
@@ -131,10 +131,10 @@ function visitPage(url, previousURL, keyword, pagesVisited, pastURLs) {
 					let pos = pagesVisited.map(function(x) {return x.url;}).indexOf(previousURL);
 					group = pagesVisited[pos].group + 1;
 				}
-				
+
 				// Get title of webpage
 				let title = $("title").text();
-				
+
 				// Create object of page information
 				pagesVisited.push({
 					url: url,
@@ -162,7 +162,7 @@ function visitPage(url, previousURL, keyword, pagesVisited, pastURLs) {
  * @param {string} keyword - keyword that stops crawler if found on a page.
  * @return {Promise.<Array.<Object>>} array of objects with links visited.
  */
-module.exports.depthFirst = function(url, limit, keyword) {	
+module.exports.depthFirst = function(url, limit, keyword) {
 	var pagesVisited = [];
 	var pastURLs = [url];
 	var previousURL = null;
@@ -177,29 +177,29 @@ module.exports.depthFirst = function(url, limit, keyword) {
 			} catch(error) {
 				console.error(error);
 			}
-				
+
 			// Check if there are links to follow on page
 			if (links && links.length) {
 				var link = links[Math.floor(Math.random() * links.length)];	// get random link
 				console.log(link);
-	
+
 				// Update URLs
 				previousURL = url;
 				url = link;
 				pastURLs.push(url);
 			} else {
-				error = 'No links to follow'; 
+				error = 'No links to follow';
 				reject(error);
 			}
 
-			// Once the limit is reached or the keyword is found, stop the crawler and 
+			// Once the limit is reached or the keyword is found, stop the crawler and
 			// resolve the promise
 			if (numLinks == limit || pagesVisited[pagesVisited.length - 1].keyword) {
 				resolve(pagesVisited);
 				break;
 			}
 		}
-	})	
+	})
 }
 
 /**
@@ -271,7 +271,7 @@ function getLinksFromQueue(queue, keyword, pagesVisited, pastURLs, limit, resolv
 	var promises = [];
 	for (let i = 0; i < size; ++i) {
 		var result = getLinks(tempQueue[i].link, tempQueue[i].prevURL, keyword, pagesVisited, pastURLs, limit, resolve).catch(e => {
-				if (e.message == 'max depth reached' || 
+				if (e.message == 'max depth reached' ||
 					e.message == 'keyword found' ||
 					e.message == 'max number of links reached') {
 					throw new StopCrawler(e.message);
@@ -317,7 +317,7 @@ function getLinksFromQueue(queue, keyword, pagesVisited, pastURLs, limit, resolv
 						} else if (pagesVisited.length >= MAX_LINKS) {
 							resolve(pagesVisited);
 							throw new StopCrawler('max number of links reached');
-						} 
+						}
 
 					    return addLinksToQueue(links, url, queue);
 					  });
@@ -345,13 +345,13 @@ module.exports.breadthFirst = function(url, limit, keyword) {
 			console.error(error);
 		}
 		addLinksToQueue(links, url, queue);
-		
+
 		while (true) {
 			// Check if depth surpassed the limit or if the keyword was found.
-			// If so, stop crawler and resolve promise. 
+			// If so, stop crawler and resolve promise.
 			if (pagesVisited[pagesVisited.length - 1].group > limit ||
 				pagesVisited[pagesVisited.length - 1].keyword) {
-					
+
 				resolve(pagesVisited);
 				break;
 			} else {
@@ -360,7 +360,7 @@ module.exports.breadthFirst = function(url, limit, keyword) {
 					previousURL = queue[0].prevURL;
 					url = queue.shift().link;
 					pastURLs.push(url);
-				
+
 					// Add links to queue asynchronously to speed up crawler
 					links = await visitPage(url, previousURL, keyword, pagesVisited, pastURLs);
 					addLinksToQueue(links, url, queue);
