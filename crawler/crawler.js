@@ -69,15 +69,17 @@ function formatLinks(links, currentPage) {
 			return true;
 
 		// Convert relative paths to absolute
-		if (!isUrlAbsolutePath(url))
+		if (!isUrlAbsolutePath(url)) {
+			if (currentPage[currentPage.length - 1] == '/') {
+				currentPage = currentPage.substr(0, currentPage.length - 1);
+			}
 			url = currentPage + url;
+		}
 
 		// Check if valid protocol
 		var path = url.split('/');
 		if (path[0] == 'http:' || path[0] == 'https:')
 			uniqueLinks.add(url);
-		
-		uniqueLinks.add(url);
 	});
 
 	// Return an array from the set of unique links
@@ -142,8 +144,9 @@ function visitPage(url, previousURL, keyword, pagesVisited, stream) {
 					group = pagesVisited[pos].group + 1;
 				}
 
-				// Get title of webpage
+				// Get title of webpage and strip of any tabs and new line characters
 				let title = $("title").text();
+				title = title.replace(/[\t\n\r]/g,'');
 
 				// Create object of page information
 				pagesVisited.push({
@@ -153,7 +156,7 @@ function visitPage(url, previousURL, keyword, pagesVisited, stream) {
 					keyword: keywordFound,
 					group: group
 				})
-
+				
 				// Write to file
 				logToFile(pagesVisited[pagesVisited.length - 1], stream); 
 				
@@ -176,11 +179,12 @@ function visitPage(url, previousURL, keyword, pagesVisited, stream) {
  */
 module.exports.depthFirst = function (url, limit, keyword, stream) {
 	var pagesVisited = [];
+	var pastLinks = [];
 	var previousURL = null;
 
 	return new Promise(async function (resolve, reject) {
 
-		for (let numLinks = 1; numLinks <= limit; numLinks++) {
+		for (let depth = 1; depth <= limit; depth++) {
 
 			// Visit page to get all links and check if the keyword appears on the page
 			try {
@@ -188,23 +192,34 @@ module.exports.depthFirst = function (url, limit, keyword, stream) {
 			} catch (error) {
 				console.error(error);
 			}
-
+	
 			// Check if there are links to follow on page
 			if (links && links.length) {
-				var link = links[Math.floor(Math.random() * links.length)]; // get random link
-				console.log(link);
+				// Randomize links and save to new array
+				pastLinks = shuffle(links);
 
-				// Update URLs
+				// Update URL
 				previousURL = url;
-				url = link;
+				url = pastLinks.pop();
 			} else {
-				error = 'No links to follow';
-				reject(error);
+				console.log('No links: ' + url);
+				
+				// Try again with a new link or exit if there are no more links to try
+				if (pastLinks && pastLinks.length) {
+					pagesVisited.pop();
+					previousURL = pagesVisited[pagesVisited.length - 1].url;
+					url = pastLinks.pop();
+					depth--;
+				} else {
+					error = 'No more links to follow';
+					reject(error, pagesVisited);
+					break;
+				}
 			}
 
 			// Once the limit is reached or the keyword is found, stop the crawler and
 			// resolve the promise
-			if (numLinks == limit || pagesVisited[pagesVisited.length - 1].keyword) {
+			if (depth == limit || pagesVisited[pagesVisited.length - 1].keyword) {
 				resolve(pagesVisited);
 				break;
 			}
@@ -237,7 +252,7 @@ module.exports.asyncBreadthFirst = function (url, limit, keyword, stream) {
 		// Then add those links to the queue. Repeat to desired depth limit set by user.
 		for (let i = 0; i < limit; ++i) {
 			try {
-				await getLinksFromQueue(queue, keyword, pagesVisited, limit, resolve);
+				await getLinksFromQueue(queue, keyword, pagesVisited, limit, resolve, stream);
 			} catch (error) {
 				console.error(error);
 			}
@@ -265,7 +280,7 @@ module.exports.asyncBreadthFirst = function (url, limit, keyword, stream) {
  * @param {resolve} resolve - function that resolves the original promise.
  * @return {Promise} resolves when all pages are visited in the queue.
  */
-function getLinksFromQueue(queue, keyword, pagesVisited, limit, resolve) {
+function getLinksFromQueue(queue, keyword, pagesVisited, limit, resolve, stream) {
 	var tempQueue = queue.slice(0); // Copy queue into temporary array
 	queue.length = 0; // Empty queue
 
@@ -379,7 +394,32 @@ module.exports.breadthFirst = function (url, limit, keyword) {
  * @param {stream.Writable} stream - file stream to log data.
  */
 function logToFile(data, stream) {
-	var log = new Date().toISOString() + '\t' + data.title + '\t' + data.url +
-		'\t' + data.keyword + '\t' + data.group + '\n';
+	var log = new Date().toISOString() + '|' + data.title + '|' + data.url +
+		'|' + data.keyword + '|' + data.group + '\n';
 	stream.write(log);
+}
+
+/**
+ * Knuth Shuffle for randomizing elements in an array.
+ * http://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
+ * @param {Array.<*>} array - array to be randomized.
+ * @return {Array.<*>} randomized array.
+ */
+function shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
 }

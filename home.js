@@ -71,19 +71,20 @@ app.post('/submit',function(req,res,next){
   
     /** LOGGING **/
   var fileName = new Date().toISOString().replace(/[.:]/g,'-') + '.log';
-  fs.appendFile('logs/' + fileName, 'timestamp\ttitle\turl\tkeywordFound\tgroup\n', function (err) {
+  fs.appendFile('logs/' + fileName, 'timestamp|title|url|keywordFound|group\n', function (err) {
 	  if (err) {
 		  console.log('oh no');
 		  throw err;
 	  }
 	  console.log('File is created successfully.');
 	    var stream = fs.createWriteStream('./logs/' + fileName, {flags:'a'});
-	  //stream.write('timestamp\ttitle\turl\tkeywordFound\tgroup\n');
-	  crawler.depthFirst('https://www.yahoo.com', 10, null, stream)
+
+	  crawler.asyncBreadthFirst('https://www.yahoo.com', 2, null, stream)
 		.then(data => {
 			console.log("done");
-		}).catch(err => {
-			console.log(err);
+		}).catch((err) => {
+			// data - array of pages visited before error occurred.
+
 		});
 	  
 	});
