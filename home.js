@@ -7,7 +7,9 @@ var session = require('express-session');
 var request = require('request');
 var cookieParser = require('cookie-parser');
 var crypto = require("crypto");
-// var cytoscape = require('cytoscape');
+var se = require('./crawler2.js');
+var rp = require('request-promise');
+var cheerio = require('cheerio');
 
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -75,6 +77,80 @@ app.get('/about',function(req,res,next){
   res.render('about',context);
 });
 
+function breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount){
+  var found = false;
+  var options = {
+    uri: currentURL,
+    transform: function (body) {
+        return cheerio.load(body);
+    }
+  };
+  rp(options) // call to request promise
+  .then(function ($) {
+        messageCount++;
+        var visitedPage = se.formatLinks(currentURL, group, keyword, $);
+        // Send the data to the browser
+        var tosend = {};
+        tosend[currentURL] = visitedPage;
+        res.write('id: ' + messageCount + '\n');
+        res.write("data: " + JSON.stringify(tosend) + '\n\n'); // Note the extra newline
+
+        // Stop the loop if the keyword was found
+        if(visitedPage['keyword']) found = true;
+        // If the group we are on is less than the limit, add its links to those to be searched
+        if (group < limit){
+          for(let i=0; i< visitedPage['links'].length; i++){
+            if(!allURLS.has(visitedPage['links'][i])){
+              URLS[group + 1].push(visitedPage['links'][i]);
+              allURLS.add(visitedPage['links'][i]);
+            }
+          }
+        }
+        for(let i=0; i<URLS.length; i++){
+          console.log(URLS[i].length);
+        }
+        // Check for more links in the current group to visit
+        while (URLS[group].length == 0 && group <= limit){
+          group++;
+        }
+        // We have reached the limit or we found the keyword so we can close the SSE connection
+        if(group > limit || found == true){
+          console.log("ending");
+          res.write('event: close\n');
+          res.write('id: ' + messageCount + '\n');
+          res.write("data: no more links" + '\n\n'); // Note the extra newline
+          res.end();
+        }
+        else{
+          var idx = Math.floor(Math.random() * URLS[group].length)
+          currentURL = URLS[group].splice(idx,1)[0];
+          console.log(currentURL);
+          breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount);
+        }
+  })
+  .catch(function (err) {
+      // Crawling or Cheerio failed
+      // console.log(err);
+      while (group <= limit && URLS[group].length == 0){
+        group++;
+      }
+      // We have reached the limit or we found the keyword so we can close the SSE connection
+      if(group > limit){
+        console.log("ending");
+        res.write('event: close\n');
+        res.write('id: ' + messageCount + '\n');
+        res.write("data: no more links" + '\n\n'); // Note the extra newline
+        res.end();
+      }
+      else{
+        var idx = Math.floor(Math.random() * URLS[group].length)
+        currentURL = URLS[group].splice(idx,1)[0];
+        console.log(currentURL);
+        breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount);
+      }
+  });
+}
+
 app.get('/stream',function(req,res,next){
   var context = {};
   context.title = "About";
@@ -85,17 +161,47 @@ app.get('/stream',function(req,res,next){
   });
   var messageCount = 0;
   res.write('\n');
-  setInterval(function (){
-    messageCount++;
-    res.write('id: ' + messageCount + '\n');
-    res.write("data: " + req.query.url + " " + req.query.keyword + " " + req.query.searchType + " " + req.query.limit + '\n\n'); // Note the extra newline
-  }, 1000);
-  setTimeout(function (){
-    messageCount++;
-    res.write('event: close\n');
-    res.write('id: ' + messageCount + '\n');
-    res.write("data: " + randomString() + '\n\n'); // Note the extra newline
-  }, 5000);
+
+  var group = 0;
+  var URLS = [];
+  var found = false;
+  var allURLS = new Set();
+  var limit = Math.min(req.query.limit, 5);
+  for (let i=0; i<=limit; i++){
+    URLS.push([]);
+  }
+  var currentURL = req.query.url;
+  if (req.query.searchType == 'Breadth'){
+    breadthSearch(res, currentURL, URLS, allURLS, req.query.keyword, group, limit, messageCount);
+  }
+  else if (req.query.searchType == 'Depth') {
+    while (limit >0){
+      limit--;
+      rp(options)
+        .then(function ($) {
+              messageCount++;
+              res.write('id: ' + messageCount + '\n');
+              res.write("data: " + JSON.stringify(se.formatLinks(req.query.url, group, "check", req.query.keyword, $)) + '\n\n'); // Note the extra newline
+              group++;
+        })
+        .catch(function (err) {
+            // Crawling or Cheerio failed
+            console.log(err);
+        });
+      }
+  }
+
+  // setInterval(function (){
+  //   messageCount++;
+  //   res.write('id: ' + messageCount + '\n');
+  //   res.write("data: " + req.query.url + " " + req.query.keyword + " " + req.query.searchType + " " + req.query.limit + '\n\n'); // Note the extra newline
+  // }, 1000);
+  // setTimeout(function (){
+  //   messageCount++;
+  //   res.write('event: close\n');
+  //   res.write('id: ' + messageCount + '\n');
+  //   res.write("data: " + randomString() + '\n\n'); // Note the extra newline
+  // }, 5000);
   // res.render('about',context);
 });
 
