@@ -46,27 +46,23 @@
         {source: 'site5.com', target: 'site17.com'},
       ]
     };
-
     //Select svg element from html --> acts as container for graph
     const svg = d3.select('svg');
     const width = svg.attr('width');
     const height = svg.attr('height');
     const assignColor = d3.scaleOrdinal(d3.schemeCategory20);
-
     //Create a force simulation object --> forces that keep nodes apart
     const simulation = d3.forceSimulation()
     	.force('link', d3.forceLink().id(d => d.site))
     	.force('charge', d3.forceManyBody().strength(-100))
 			.force('center', d3.forceCenter(width / 2, height / 2))
     	.force('collision', d3.forceCollide(15))
-
     //Creates link group to append links to svg
     const linkElements = svg.append('g')
     	.attr('class', 'links')
     	.selectAll('line')
     	.data(data.links)
     	.enter().append('line');
-
     //Node group, appends circle to svg for each node of data
     const nodeElements = svg.append('g')
     	.attr('class', 'nodes')
@@ -79,7 +75,6 @@
           .on("start", dragstarted)
           .on("drag", dragged)
           .on("end", dragended));
-
     //Text group, creates text element for each piece of data
     const textElements = svg.append('g')
     	.selectAll('text')
@@ -89,19 +84,15 @@
     		.attr('font-size', 12)
     		.attr('dx', 15)
     		.attr('dy', 4);
-
     //start the simulation to draw nodes to screen
     //For each piece of data(node) run ticked function to place nodes
     simulation
     	.nodes(data.nodes)
     	.on('tick', ticked); //tick represents each piece of data
-
     //draws links between nodes
     simulation
 			.force('link')
     	.links(data.links);
-
-
     function ticked() {
       linkElements
       	.attr('x1', d => d.source.x)
@@ -115,8 +106,6 @@
        	.attr('x', node => node.x)
        	.attr('y', node => node.y)
     }
-
-
     /********************************************
     * Physics functions for moving graph around
     *********************************************/
@@ -125,12 +114,10 @@
       d.fx = d.x;
       d.fy = d.y;
 		}
-
 		function dragged(d) {
   		d.fx = d3.event.x;
 			d.fy = d3.event.y;
 		}
-
 		function dragended(d) {
       if (!d3.event.active) simulation.alphaTarget(0);
       d.fx = null;
@@ -155,31 +142,10 @@
       // global nodes value to track all of the nodes in the graph and prevent duplicates
       var nodes = {};
       source.addEventListener('message', function(e) {
-        // The data is a JSON object, so we must parse it.
-        // It is of the form,:
-        // {url: {
-          // 'group': group number
-          // 'links': array of links
-          // 'visited': true
-          // 'keyword': true/false
-          // 'title': title
-          // }
-        // }
-        var tmp = JSON.parse(e.data);
-        Object.keys(tmp).forEach(function(key) {
-            // console.log(key, tmp[key]);
-            if(!nodes[key] || !nodes[key]['visited']){
-              nodes[key] = tmp[key];
-              console.log(tmp[key]['links'].length);
-              tmp[key]['links'].forEach(function(l){
-                if(!nodes[l]){
-                  nodes[l] = {'group': parseInt(tmp[key]['group']) + 1};
-                }
-              });
-            }
 
-        });
-        console.log(Object.keys(nodes));
+        var tmp = JSON.parse(e.data);
+ 
+        //console.log(tmp);
       }, false);
       source.addEventListener('close', function(e) {
         source.close();
