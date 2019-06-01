@@ -37,7 +37,7 @@ function isUrlAbsolutePath(url) {
  * @param {string} currentPage - URL of page with links to be formatted.
  * @return {Array.<string>} array of web URLs.
  */
-module.exports.formatLinks = function(currentPage, group, keyword, $) {
+module.exports.formatLinks = function(currentPage, previousURL, group, keyword, $) {
 	// $('a'), "***"
 	var uniqueLinks = new Set();
 
@@ -54,13 +54,14 @@ module.exports.formatLinks = function(currentPage, group, keyword, $) {
 
 		uniqueLinks.add(url);
 	});
-	var res = {};
-	res['group'] = group;
-	res['visited'] = true;
-	// res['previousURL'] = previousURL;
-	res['links'] = Array.from(uniqueLinks);
-	res['keyword'] = findKeyword($, keyword);
-	res['title'] = $("title").text();
+	// var res = {};
+	// res['group'] = group;
+	// res['visited'] = true;
+	// res['prevURL'] = previousURL;
+	// res['url'] = currentPage;
+	// res['links'] = Array.from(uniqueLinks);
+	// res['keyword'] = findKeyword($, keyword);
+	// res['title'] = $("title").text();
 	// Return an array from the set of unique links
-	return res;
+	return Array.from(uniqueLinks);
 }

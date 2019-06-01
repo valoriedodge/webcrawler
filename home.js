@@ -77,7 +77,7 @@ app.get('/about',function(req,res,next){
   res.render('about',context);
 });
 
-function depthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount){
+function depthSearch(res, previousURL, currentURL, URLS, allURLS, keyword, group, limit, messageCount){
   var found = false;
   var currentGroup = limit;
   var options = {
@@ -89,21 +89,28 @@ function depthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, mess
   rp(options) // call to request promise
   .then(function ($) {
         messageCount++;
-        var visitedPage = se.formatLinks(currentURL, group, keyword, $);
-        // Send the data to the browser
         var tosend = {};
-        tosend[currentURL] = visitedPage;
+        tosend['group'] = group;
+        tosend['prevURL'] = previousURL;
+        tosend['url'] = currentURL;
+        // res['links'] = Array.from(uniqueLinks);
+        tosend['keyword'] = findKeyword($, keyword);
+        tosend['title'] = $("title").text();
+        var links = se.formatLinks(currentURL, previousURL, group, keyword, $);
+        // Send the data to the browser
+        // var tosend = {};
+        // tosend[currentURL] = visitedPage;
         res.write('id: ' + messageCount + '\n');
         res.write("data: " + JSON.stringify(tosend) + '\n\n'); // Note the extra newline
 
         // Stop the loop if the keyword was found
-        if(visitedPage['keyword']) found = true;
+        if(tosend['keyword']) found = true;
         // If the group we are on is less than the limit, add its links to those to be searched
         if (group < limit){
-          for(let i=0; i< visitedPage['links'].length; i++){
-            if(!allURLS.has(visitedPage['links'][i])){
-              URLS[group + 1].push(visitedPage['links'][i]);
-              allURLS.add(visitedPage['links'][i]);
+          for(let i=0; i< links.length; i++){
+            if(!allURLS.has(links[i])){
+              URLS[group + 1].push({'url':links[i], 'prevURL': currentURL});
+              allURLS.add(links[i]);
             }
           }
         }
@@ -124,9 +131,11 @@ function depthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, mess
         }
         else{
           var idx = Math.floor(Math.random() * URLS[currentGroup].length)
-          currentURL = URLS[currentGroup].splice(idx,1)[0];
+          var tmp = URLS[currentGroup].splice(idx,1)[0];
+          previousURL = tmp.prevURL;
+          currentURL = tmp.url;
           console.log(currentURL);
-          depthSearch(res, currentURL, URLS, allURLS, keyword, currentGroup, limit, messageCount);
+          depthSearch(res, previousURL, currentURL, URLS, allURLS, keyword, currentGroup, limit, messageCount);
         }
   })
   .catch(function (err) {
@@ -146,14 +155,36 @@ function depthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, mess
       }
       else{
         var idx = Math.floor(Math.random() * URLS[currentGroup].length)
-        currentURL = URLS[currentGroup].splice(idx,1)[0];
+        var tmp = URLS[currentGroup].splice(idx,1)[0];
+        previousURL = tmp.prevURL;
+        currentURL = tmp.url;
         console.log(currentURL);
-        depthSearch(res, currentURL, URLS, allURLS, keyword, currentGroup, limit, messageCount);
+        depthSearch(res, previousURL, currentURL, URLS, allURLS, keyword, currentGroup, limit, messageCount);
       }
   });
 }
+/**
+ * Checks HTML for keyword.
+ * @param {cheerio} $ - cheerio object with loaded HTML.
+ * @return {boolean} returns true if found.
+ */
+function findKeyword($, keyword) {
+	text = $("body").text();
+	var regex = new RegExp('\\b' + keyword + '\\b', 'gi');
+	return regex.test(text);
+}
 
-function breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount){
+/**
+ * Checks if URL link has a relative or absolute path.
+ * @param {string} url - url of webpage to be checked.
+ * @return {boolean} returns true if absolute, false if relative.
+ */
+function isUrlAbsolutePath(url) {
+	var regex = new RegExp('https?:\/\/', 'i');
+	return regex.test(url);
+}
+
+function breadthSearch(res, previousURL, currentURL, URLS, allURLS, keyword, group, limit, messageCount){
   var found = false;
   var options = {
     uri: currentURL,
@@ -164,21 +195,28 @@ function breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, me
   rp(options) // call to request promise
   .then(function ($) {
         messageCount++;
-        var visitedPage = se.formatLinks(currentURL, group, keyword, $);
-        // Send the data to the browser
         var tosend = {};
-        tosend[currentURL] = visitedPage;
+      	tosend['group'] = group;
+      	tosend['prevURL'] = previousURL;
+      	tosend['url'] = currentURL;
+      	// res['links'] = Array.from(uniqueLinks);
+      	tosend['keyword'] = findKeyword($, keyword);
+      	tosend['title'] = $("title").text();
+        var links = se.formatLinks(currentURL, previousURL, group, keyword, $);
+        // Send the data to the browser
+        // var tosend = {};
+        // tosend[currentURL] = visitedPage;
         res.write('id: ' + messageCount + '\n');
         res.write("data: " + JSON.stringify(tosend) + '\n\n'); // Note the extra newline
 
         // Stop the loop if the keyword was found
-        if(visitedPage['keyword']) found = true;
+        if(tosend['keyword']) found = true;
         // If the group we are on is less than the limit, add its links to those to be searched
         if (group < limit){
-          for(let i=0; i< visitedPage['links'].length; i++){
-            if(!allURLS.has(visitedPage['links'][i])){
-              URLS[group + 1].push(visitedPage['links'][i]);
-              allURLS.add(visitedPage['links'][i]);
+          for(let i=0; i< links.length; i++){
+            if(!allURLS.has(links[i])){
+              URLS[group + 1].push({'url':links[i], 'prevURL': currentURL});
+              allURLS.add(links[i]);
             }
           }
         }
@@ -199,13 +237,16 @@ function breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, me
         }
         else{
           var idx = Math.floor(Math.random() * URLS[group].length)
-          currentURL = URLS[group].splice(idx,1)[0];
+          var tmp = URLS[group].splice(idx,1)[0];
+          previousURL = tmp.prevURL;
+          currentURL = tmp.url;
           console.log(currentURL);
-          breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount);
+          breadthSearch(res, previousURL, currentURL, URLS, allURLS, keyword, group, limit, messageCount);
         }
   })
   .catch(function (err) {
       // Crawling or Cheerio failed
+      // console.log(err);
       // console.log(err);
       while (group <= limit && URLS[group].length == 0){
         group++;
@@ -220,9 +261,11 @@ function breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, me
       }
       else{
         var idx = Math.floor(Math.random() * URLS[group].length)
-        currentURL = URLS[group].splice(idx,1)[0];
+        var tmp = URLS[group].splice(idx,1)[0];
+        previousURL = tmp.prevURL;
+        currentURL = tmp.url;
         console.log(currentURL);
-        breadthSearch(res, currentURL, URLS, allURLS, keyword, group, limit, messageCount);
+        breadthSearch(res, previousURL, currentURL, URLS, allURLS, keyword, group, limit, messageCount);
       }
   });
 }
@@ -248,11 +291,11 @@ app.get('/stream',function(req,res,next){
   }
   var currentURL = req.query.url;
   if (req.query.searchType == 'Breadth'){
-    breadthSearch(res, currentURL, URLS, allURLS, req.query.keyword, group, limit, messageCount);
+    breadthSearch(res, currentURL, currentURL, URLS, allURLS, req.query.keyword, group, limit, messageCount);
   }
   else if (req.query.searchType == 'Depth') {
     // group = URLS.length -1;
-    depthSearch(res, currentURL, URLS, allURLS, req.query.keyword, group, limit, messageCount);
+    depthSearch(res, currentURL, currentURL, URLS, allURLS, req.query.keyword, group, limit, messageCount);
   }else{
     res.write('event: close\n');
      res.write('id: ' + messageCount + '\n');
