@@ -1,49 +1,49 @@
 {{#if graph}}
-    <h1>{{graph}}</h1>
-    <div id="main">
-      <svg height="500" width="900"></svg>
-    </div>
+<h1>{{graph}}</h1>
+<div id="main">
+  <svg height="500" width="900"></svg>
+</div>
 
-  <script>
-    // Dummy Data - Data must be in this format
-    window.onload = function(){ /*code here*/
+<script>
+  // Dummy Data - Data must be in this format
+  window.onload = function () { /*code here*/
     const data = {
       nodes: [
-        {site: 'site1.com', group: 0},
-        {site: 'site2.com', group: 1},
-        {site: 'site3.com', group: 1},
-        {site: 'site4.com', group: 1},
-        {site: 'site5.com', group: 1},
-        {site: 'site6.com', group: 2},
-        {site: 'site7.com', group: 2},
-        {site: 'site8.com', group: 2},
-        {site: 'site9.com', group: 2},
-        {site: 'site10.com', group: 2},
-        {site: 'site11.com', group: 2},
-        {site: 'site12.com', group: 2},
-        {site: 'site13.com', group: 2},
-        {site: 'site14.com', group: 2},
-        {site: 'site15.com', group: 2},
-        {site: 'site16.com', group: 2},
-        {site: 'site17.com', group: 2},
+        { site: 'site1.com', group: 0 },
+        { site: 'site2.com', group: 1 },
+        { site: 'site3.com', group: 1 },
+        { site: 'site4.com', group: 1 },
+        { site: 'site5.com', group: 1 },
+        { site: 'site6.com', group: 2 },
+        { site: 'site7.com', group: 2 },
+        { site: 'site8.com', group: 2 },
+        { site: 'site9.com', group: 2 },
+        { site: 'site10.com', group: 2 },
+        { site: 'site11.com', group: 2 },
+        { site: 'site12.com', group: 2 },
+        { site: 'site13.com', group: 2 },
+        { site: 'site14.com', group: 2 },
+        { site: 'site15.com', group: 2 },
+        { site: 'site16.com', group: 2 },
+        { site: 'site17.com', group: 2 },
       ],
       links: [
-        {source: 'site1.com', target: 'site2.com'},
-        {source: 'site1.com', target: 'site3.com'},
-        {source: 'site1.com', target: 'site4.com'},
-        {source: 'site1.com', target: 'site5.com'},
-        {source: 'site2.com', target: 'site6.com'},
-        {source: 'site2.com', target: 'site7.com'},
-        {source: 'site2.com', target: 'site8.com'},
-        {source: 'site3.com', target: 'site9.com'},
-        {source: 'site3.com', target: 'site10.com'},
-        {source: 'site3.com', target: 'site11.com'},
-        {source: 'site4.com', target: 'site12.com'},
-        {source: 'site4.com', target: 'site13.com'},
-        {source: 'site4.com', target: 'site14.com'},
-        {source: 'site5.com', target: 'site15.com'},
-        {source: 'site5.com', target: 'site16.com'},
-        {source: 'site5.com', target: 'site17.com'},
+        { source: 'site1.com', target: 'site2.com' },
+        { source: 'site1.com', target: 'site3.com' },
+        { source: 'site1.com', target: 'site4.com' },
+        { source: 'site1.com', target: 'site5.com' },
+        { source: 'site2.com', target: 'site6.com' },
+        { source: 'site2.com', target: 'site7.com' },
+        { source: 'site2.com', target: 'site8.com' },
+        { source: 'site3.com', target: 'site9.com' },
+        { source: 'site3.com', target: 'site10.com' },
+        { source: 'site3.com', target: 'site11.com' },
+        { source: 'site4.com', target: 'site12.com' },
+        { source: 'site4.com', target: 'site13.com' },
+        { source: 'site4.com', target: 'site14.com' },
+        { source: 'site5.com', target: 'site15.com' },
+        { source: 'site5.com', target: 'site16.com' },
+        { source: 'site5.com', target: 'site17.com' },
       ]
     };
     //Select svg element from html --> acts as container for graph
@@ -53,58 +53,58 @@
     const assignColor = d3.scaleOrdinal(d3.schemeCategory20);
     //Create a force simulation object --> forces that keep nodes apart
     const simulation = d3.forceSimulation()
-    	.force('link', d3.forceLink().id(d => d.site))
-    	.force('charge', d3.forceManyBody().strength(-100))
-			.force('center', d3.forceCenter(width / 2, height / 2))
-    	.force('collision', d3.forceCollide(15))
+      .force('link', d3.forceLink().id(d => d.site))
+      .force('charge', d3.forceManyBody().strength(-100))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide(15))
     //Creates link group to append links to svg
     const linkElements = svg.append('g')
-    	.attr('class', 'links')
-    	.selectAll('line')
-    	.data(data.links)
-    	.enter().append('line');
+      .attr('class', 'links')
+      .selectAll('line')
+      .data(data.links)
+      .enter().append('line');
     //Node group, appends circle to svg for each node of data
     const nodeElements = svg.append('g')
-    	.attr('class', 'nodes')
-    	.selectAll('circle')
-    	.data(data.nodes)
-    	.enter().append('circle')
-    	.attr('r', 10)
-    	.attr('fill', d => assignColor(d.group))
-    	.call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
+      .attr('class', 'nodes')
+      .selectAll('circle')
+      .data(data.nodes)
+      .enter().append('circle')
+      .attr('r', 10)
+      .attr('fill', d => assignColor(d.group))
+      .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended));
     //Text group, creates text element for each piece of data
     const textElements = svg.append('g')
-    	.selectAll('text')
-    	.data(data.nodes)
-    	.enter().append('text')
-    		.text(node => node.site)
-    		.attr('font-size', 12)
-    		.attr('dx', 15)
-    		.attr('dy', 4);
+      .selectAll('text')
+      .data(data.nodes)
+      .enter().append('text')
+      .text(node => node.site)
+      .attr('font-size', 12)
+      .attr('dx', 15)
+      .attr('dy', 4);
     //start the simulation to draw nodes to screen
     //For each piece of data(node) run ticked function to place nodes
     simulation
-    	.nodes(data.nodes)
-    	.on('tick', ticked); //tick represents each piece of data
+      .nodes(data.nodes)
+      .on('tick', ticked); //tick represents each piece of data
     //draws links between nodes
     simulation
-			.force('link')
-    	.links(data.links);
+      .force('link')
+      .links(data.links);
     function ticked() {
       linkElements
-      	.attr('x1', d => d.source.x)
-      	.attr('y1', d => d.source.y)
-      	.attr('x2', d => d.target.x)
-      	.attr('y2', d => d.target.y);
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y);
       nodeElements
-      	.attr('cx', d => d.x)
-      	.attr('cy', d => d.y);
+        .attr('cx', d => d.x)
+        .attr('cy', d => d.y);
       textElements
-       	.attr('x', node => node.x)
-       	.attr('y', node => node.y)
+        .attr('x', node => node.x)
+        .attr('y', node => node.y)
     }
     /********************************************
     * Physics functions for moving graph around
@@ -113,42 +113,42 @@
       if (!d3.event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
       d.fy = d.y;
-		}
-		function dragged(d) {
-  		d.fx = d3.event.x;
-			d.fy = d3.event.y;
-		}
-		function dragended(d) {
+    }
+    function dragged(d) {
+      d.fx = d3.event.x;
+      d.fy = d3.event.y;
+    }
+    function dragended(d) {
       if (!d3.event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;
     }
   }
-  </script>
+</script>
 
 
-  {{else}}
-    <div id="eventlink" style="display:none">{{eventurl}}</div>
-    <h3>{{title}}</h3>
-    {{#if keyword}}
-      {{keyword}}
-    {{/if}}
-    <script type="text/javascript">
-      // This is the embedded link with all of the form data for the crawler
-      var link = document.getElementById("eventlink").innerHTML.replace(/&amp;/g, '&');
-      console.log(link);
-      // This is registering the SSE event to listen for data from the server
-      var source = new EventSource(link);
-      // global nodes value to track all of the nodes in the graph and prevent duplicates
-      var nodes = {};
-      source.addEventListener('message', function(e) {
+{{else}}
+<div id="eventlink" style="display:none">{{eventurl}}</div>
+<h3>{{title}}</h3>
+{{#if keyword}}
+{{keyword}}
+{{/if}}
+<script type="text/javascript">
+  // This is the embedded link with all of the form data for the crawler
+  var link = document.getElementById("eventlink").innerHTML.replace(/&amp;/g, '&');
+  console.log(link);
+  // This is registering the SSE event to listen for data from the server
+  var source = new EventSource(link);
+  // global nodes value to track all of the nodes in the graph and prevent duplicates
+  var nodes = {};
+  source.addEventListener('message', function (e) {
 
-        var tmp = JSON.parse(e.data);
- 
-        //console.log(tmp);
-      }, false);
-      source.addEventListener('close', function(e) {
-        source.close();
-      }, false);
-    </script>
-  {{/if}}
+    var tmp = JSON.parse(e.data);
+
+    console.log(tmp);
+  }, false);
+  source.addEventListener('close', function (e) {
+    source.close();
+  }, false);
+</script>
+{{/if}}

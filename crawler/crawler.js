@@ -105,7 +105,7 @@ class Crawler {
      * @return {boolean} returns true if found.
      */
     _findKeyword($) {
-        text = $("body").text();
+        var text = $("body").text();
         var regex = new RegExp('\\b' + this.keyword + '\\b', 'gi');
         return regex.test(text);
     }
