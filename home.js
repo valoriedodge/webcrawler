@@ -92,7 +92,7 @@ app.get('/stream', function (req, res, next) {
     // Get query values
     var limit = Math.min(req.query.limit, 5);
     var url = req.query.url;
-    var keyword = req.query.keyword;
+    var keyword = req.query.keyword === '' ? null : req.query.keyword;
 
     // Start crawl.
     if (req.query.searchType == 'Breadth') {
