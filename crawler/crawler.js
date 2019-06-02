@@ -48,6 +48,9 @@ class Crawler {
 
         /** @private {Set.<string>} URLs visited. */
         this.pastURLs = new Set();
+
+        /** @private {boolean} if keyword is found on page */
+        this.keywordFound = false;
     }
 
     /**
@@ -69,21 +72,25 @@ class Crawler {
         if (lastPage.group > this.limit) {
             return {
                 stop: true,
+                val: 'limit',
                 msg: 'max depth reached'
             };
         } else if (lastPage.keyword) {
             return {
                 stop: true,
+                val: 'keyword',
                 msg: 'keyword found'
             };
         } else if (this.pagesVisited.length >= MAX_LINKS) {
             return {
                 stop: true,
+                val: 'max',
                 msg: 'max number of links reached'
             };
         } else {
             return {
                 stop: false,
+                val: '',
                 msg: ''
             };
         }
@@ -202,61 +209,66 @@ class Crawler {
 
         return new Promise(function (resolve, reject, onCancel) {
             // Get html body from url
-            customRequest.get(url, function (err, res, body) {
-                if (err) {
-                    reject(err);
-                } else {
-                    let $ = cheerio.load(body);
+            var request = customRequest.get(url, function (err, res, body) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        let $ = cheerio.load(body);
 
-                    // Search for keyword on page, if one is specified
-                    let keywordFound = (self.keyword) ? self._findKeyword($) : false;
+                        // Search for keyword on page, if one is specified
+                        let keywordFound = (self.keyword) ? self._findKeyword($) : false;
 
-                    // Get links on page and format them
-                    let links = $('a');
-                    links = self._formatLinks(links, url, $);
+                        // Get links on page and format them
+                        let links = $('a');
+                        links = self._formatLinks(links, url, $);
 
-                    // Get group number of url, where group number is the depth of the crawler
-                    // e.g. starting url = 0, links on starting url = 1, links of those links = 2
-                    let group = 0;
-                    if (previousURL != null) {
-                        let pos = self.pagesVisited.map(function (x) {
-                                return x.url;
-                            }).indexOf(previousURL);
-                        group = self.pagesVisited[pos].group + 1;
+                        // Get group number of url, where group number is the depth of the crawler
+                        // e.g. starting url = 0, links on starting url = 1, links of those links = 2
+                        let group = 0;
+                        if (previousURL != null) {
+                            let pos = self.pagesVisited.map(function (x) {
+                                    return x.url;
+                                }).indexOf(previousURL);
+                            group = self.pagesVisited[pos].group + 1;
+                        }
+
+                        // Get title of webpage and strip of any tabs and new line characters
+                        let title = $("title").text();
+                        title = title.replace(/[\t\n\r]/g, '');
+
+                        // Add to set of pages visited
+                        self.pastURLs.add(url);
+
+                        // Create object of page information
+                        let data = {
+                            url: url,
+                            prevURL: previousURL,
+                            title: title,
+                            keyword: keywordFound,
+                            group: group
+                        };
+
+                        // Store page information in an array
+                        self.pagesVisited.push(data);
+
+                        // If links were successfully scraped, write to file and send to client
+                        let stopConditions = self._checkExitConditions();
+                        let isStopped = stopConditions.val == 'max' || stopConditions.val == 'limit' || self.keywordFound;
+                        if (links && links.length && !isStopped) {
+                            self._logToFile(data);
+                            self.sse.write(self.id, JSON.stringify(data));
+                            self.id++;
+                            if (stopConditions.val == 'keyword') {
+                                self.keywordFound = true;
+                            }
+                        }
+
+                        resolve(links);
                     }
-
-                    // Get title of webpage and strip of any tabs and new line characters
-                    let title = $("title").text();
-                    title = title.replace(/[\t\n\r]/g, '');
-
-                    // Add to set of pages visited
-                    self.pastURLs.add(url);
-
-                    // Create object of page information
-                    let data = {
-                        url: url,
-                        prevURL: previousURL,
-                        title: title,
-                        keyword: keywordFound,
-                        group: group
-                    };
-
-                    // Store page information in an array
-                    self.pagesVisited.push(data);
-
-                    // If links were successfully scraped, write to file and send to client
-                    if (links && links.length && !self._checkExitConditions().stop) {
-                        self._logToFile(data);
-                        self.sse.write(self.id, JSON.stringify(data));
-                        self.id++;
-                    }
-
-                    resolve(links);
-                }
-            });
+                });
             onCancel(function () {
-                console.log("aborted");
-                customRequest.abort();
+                console.log("aborted request: " + url);
+                request.abort();
             });
         })
     }
@@ -356,7 +368,7 @@ class Crawler {
     breadthFirst(url, limit, keyword) {
         var queue = [];
         var previousURL = null;
-		var currentDepth = 1;
+        var currentDepth = 1;
         this.limit = limit;
         this.keyword = keyword;
         var self = this;
@@ -413,8 +425,12 @@ class Crawler {
                             if (e.message == 'max depth reached' ||
                                 e.message == 'keyword found' ||
                                 e.message == 'max number of links reached') {
-                                throw new StopCrawler(e.message);
+
+                                throw {
+                                    message: e.message
+                                }
                             }
+                            console.log(e.message);
                         });
                     promises.push(result);
                 }
@@ -427,7 +443,7 @@ class Crawler {
                 // If an error occurs, resolve the incomplete data and cancel the
                 // remaining promises.
                 console.log(e.message);
-                resolve(self.pagesVisited);
+                //resolve(self.pagesVisited);
                 promises.forEach(p => p.cancel());
             });
 
@@ -442,8 +458,10 @@ class Crawler {
                     // Check exit conditions to stop the crawler
                     let isDone = self._checkExitConditions();
                     if (isDone.stop) {
+                        throw {
+                            message: isDone.msg
+                        };
                         resolve(self.pagesVisited);
-                        throw new self._StopCrawler(isDone.msg);
                     }
                     return self._addLinksToQueue(links, url, queue);
                 });
