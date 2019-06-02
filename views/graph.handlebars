@@ -309,4 +309,14 @@
     //update();
     source.close();
   }, false);
+  // $(document).ready(function(){
+  //   $(window).on("beforeunload", function() {
+  //     alert("here");
+  //       source.close();
+  //       return true ? "Do you really want to close?" : null;
+  //   })
+  // })
+  window.onbeforeunload = function (e) {
+      source.close();
+    }
 </script>
