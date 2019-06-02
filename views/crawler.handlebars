@@ -11,36 +11,58 @@
           <label for="keyword">Search Keyword</label>
           <input class="form-control" id='keyword' name = 'keyword' type="text" >
         </div>
-        <div class="form-group">
-          <label for="maxDepth">Max Depth for Search</label>
+				<div class="form-check form-check-inline">
+					<input class="form-check-input" onclick="breadthselected()" type="radio" required name="searchType" id="breadth" value="Breadth">
+					<label class="form-check-label" for="breadth">Breadth First Search</label>
+				</div>
+				<div class="form-check form-check-inline">
+					<input class="form-check-input" onclick="depthselected()" type="radio" name="searchType" id="depth" value="Depth">
+					<label class="form-check-label" for="depth">Depth First Search</label>
+				</div>
+        <div class="form-group" id="maxDepthChoice">
+          <label for="maxDepth">Max Depth for Depth First Search</label>
           <select class="form-control" name="maxDepth" id="maxDepth">
-            <option value='1'>1</option>
-            <option value='2'>2</option>
-            <option value='3'>3</option>
-            <option value='4'>4</option>
-            <option value='5'>5</option>
+						{{#each depth}}
+            <option value='{{this}}'>{{this}}</option>
+						{{/each}}
           </select>
         </div>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="radio" required name="searchType" id="breadth" value="Breadth">
-          <label class="form-check-label" for="breadth">Breadth First Search</label>
+				<div class="form-group" id="maxBreadthChoice" style="display:none">
+          <label for="maxBreadth">Max Depth for Breadth First Search</label>
+          <select class="form-control" name="maxBreadth" id="maxBreadth">
+            <option value='1'>1</option>
+						<option value='2'>2</option>
+          </select>
         </div>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="radio" name="searchType" id="depth" value="Depth">
-          <label class="form-check-label" for="depth">Depth First Search</label>
-        </div>
+
         <button type="submit" class="btn btn-primary">Submit</button>
       </form>
     </div>
     <div class="col-md-8">
 			<h4>Prevous URL Searches</h4>
 			<div>
-			  <ul>
-			  {{#each pastURLs}}
-			    <li>{{this.url}}</li>
-			  {{/each}}
-		  	</ul>
+		  {{#each pastURLs}}
+			<a href='{{this.query}}' class='previouslinks'>
+		    <div>
+					<div class="mainurl"><b>URL</b> {{this.url}}</div>
+					<b>Keyword:</b> {{this.keyword}} <b>Searchtype:</b> {{this.searchtype}} <b>Limit: </b>{{this.limit}}
+				</div>
+			</a>
+		  {{/each}}
 			</div>
     </div>
   </div>
 </div>
+<script>
+function breadthselected(){
+	var mdc = document.getElementById('maxDepthChoice');
+	mdc.style.display = "none";
+	var mbc = document.getElementById('maxBreadthChoice');
+	mbc.style.display ="block";
+}
+function depthselected(){
+	var mdc = document.getElementById('maxDepthChoice')
+	mdc.style.display = "block";
+	var mbc = document.getElementById('maxBreadthChoice')
+	mbc.style.display = "none";}
+</script>

@@ -12,6 +12,7 @@ var crypto = require("crypto");
 var Crawler = require('./crawler/crawler');
 var SSE = require('./crawler/sse');
 var Log = require('./crawler/log');
+const DEPTHLIMIT = 50;
 
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({
@@ -22,7 +23,6 @@ app.use(session({
         secret: 'SecretPassword'
     }));
 app.use(express.static('assets'));
-
 app.engine('handlebars', handlebars.engine);
 app.set('view engine', 'handlebars');
 app.set('port', process.env.PORT || 80);
@@ -37,30 +37,50 @@ app.get('/', function (req, res, next) {
     res.render('home', context);
 });
 
-app.get('/crawler', function (req, res, next) {
-    var context = {};
-    context.title = "Crawl the Web from a Starting URL"
-        var pastURLs = [];
-    if (req.cookies && req.cookies["pastURLs"]) {
-        pastURLs = req.cookies["pastURLs"];
-    }
-    context.pastURLs = pastURLs;
-    res.render('crawler', context);
+app.get('/crawler',function(req,res,next){
+  var context = {};
+  context.title = "Crawl the Web from a Starting URL"
+  var pastURLs = [];
+  if (req.cookies && req.cookies["pastURLs"]) {
+    pastURLs = req.cookies["pastURLs"];
+  }
+  var tmp = pastURLs.map((x)=>{
+    return {"query": "/previous?url=" + x.url + "&keyword=" + x.keyword + "&searchType=" + x.searchType + "&maxDepth=" + x.maxDepth, 'url': x.url, 'keyword': x.keyword, "searchtype": x.searchType, "limit": x.maxDepth};
+  });
+  var depthOptions = [];
+  for (let i=1; i<DEPTHLIMIT; i++){
+    depthOptions.push(i);
+  }
+  context.depth = depthOptions;
+  context.pastURLs = tmp;
+  res.render('crawler',context);
+});
+
+app.get('/previous',function(req,res,next){
+  var context = {};
+  var eventURL = "/stream?url=" + req.query.url + "&keyword=" + req.query.keyword + "&searchType=" + req.query.searchType + "&limit=" + req.query.maxDepth;
+  var given_url = req.query.url;
+  context.eventurl = eventURL;
+  context.title = req.query.searchType + "-First Webcrawl for "+ req.query.url + " limit " + req.query.maxDepth;
+  if (req.query.keyword && req.query.keyword.trim() != "") {
+    context.keyword = "Keyword: " + req.query.keyword;
+  }
+  res.render('graph',context);
 });
 
 app.post('/submit', function (req, res, next) {
     var context = {};
-    var eventURL = "/stream?url=" + req.body.url + "&keyword=" + req.body.keyword + "&searchType=" + req.body.searchType + "&limit=" + req.body.maxDepth;
+    var limit = req.body.maxDepth;
+    if (req.body.searchType == 'Breadth') limit = req.body.maxBreadth;
+    var eventURL = "/stream?url=" + req.body.url + "&keyword=" + req.body.keyword + "&searchType=" + req.body.searchType + "&limit=" + limit;
     var given_url = req.body.url;
     var pastURLs = [];
     if (req.cookies["pastURLs"])
         pastURLs = [...req.cookies["pastURLs"]];
-    pastURLs.push({
-        "url": given_url
-    });
+    pastURLs.push({"url":given_url, "keyword":req.body.keyword, "searchType": req.body.searchType, "maxDepth": limit});
     res.cookie("pastURLs", pastURLs);
     context.eventurl = eventURL;
-    context.title = req.body.searchType + "-First Webcrawl for " + req.body.url + " limit " + req.body.maxDepth;
+    context.title = req.body.searchType + "-First Webcrawl for " + req.body.url + " limit " + limit;
     if (req.body.keyword && req.body.keyword.trim() != "") {
         context.keyword = "Keyword: " + req.body.keyword;
     }
@@ -90,7 +110,7 @@ app.get('/stream', function (req, res, next) {
     var crawler = new Crawler(logger, sseConnection);
 
     // Get query values
-    var limit = Math.min(req.query.limit, 5);
+    var limit = req.query.limit;
     var url = req.query.url;
     var keyword = req.query.keyword === '' ? null : req.query.keyword;
 
@@ -108,8 +128,8 @@ app.get('/stream', function (req, res, next) {
     } else {
 		sseConnection.end();
 	}
-	
-    
+
+
 });
 
 app.get('/graph', function (req, res, next) {

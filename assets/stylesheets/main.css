@@ -5,7 +5,7 @@ form, li {
   text-align: left;
 }
 
-#main { 
+#main {
   margin:0;
   position:fixed;
   top:100px;
@@ -13,14 +13,65 @@ form, li {
   bottom:0;
   left:0;
 }
-
+.maincontent{
+  height: 800px;
+  width: 100%;
+  margin-top: -50px;
+  background-image: url("../images/cover.png");
+  background-repeat:no-repeat;
+  background-size: cover;
+}
+.title {
+  margin: 10px;
+}
+.maintext {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -moz-transform: translateX(-50%) translateY(-50%);
+  -webkit-transform: translateX(-50%) translateY(-50%);
+  transform: translateX(-50%) translateY(-50%);
+  padding: 20px;
+  background: white;
+  text-align: center;
+}
 .links line {
   stroke: #aaa;
   stroke-width: 3px;
   stroke-opacity: 0.85;
 }
 
-
+.previouslinks, previouslinks:hover {
+  cursor:pointer;
+  text-decoration: none;
+  color: black;
+  text-align: left;
+}
+img {
+  margin-left: -430px;
+  width:100%;
+}
+/* .about-image {
+  background-image: url("../images/cover.png");
+  background-repeat: no-repeat; */
+  /* margin-left: -10px;
+  margin-right: -10px; */
+  /* max-width: 200%; */
+  /* display:block; */
+    /* position:absolute; */
+    /* background:url(../images/House-03.png); */
+    /* background-repeat:no-repeat; */
+    /* background-size: 200% 200%; */
+    /* width:122px;
+    height:148px; */
+    /* float:right; */
+    /* bottom:0;
+    right:0; */
+  /* background-color: blue; */
+/* } */
+.mainurl {
+  font-size: large;
+}
 /*Shape Specific class --> Cirlce*/
 .circle {
   pointer-event: all;
