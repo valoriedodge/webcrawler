@@ -12,7 +12,7 @@ Promise.config({
 });
 
 /** @const max number of pages to visit. */
-const MAX_LINKS = 1000;
+const MAX_LINKS = 300;
 
 /** @const user agents in case websites block servers from scraping data */
 const USER_AGENTS = [
@@ -81,7 +81,7 @@ class Crawler {
                 val: 'keyword',
                 msg: 'keyword found'
             };
-        } else if (this.pagesVisited.length >= MAX_LINKS) {
+        } else if (this.id >= MAX_LINKS || this.id < 0) {
             return {
                 stop: true,
                 val: 'max',
@@ -256,8 +256,11 @@ class Crawler {
                         let isStopped = stopConditions.val == 'max' || stopConditions.val == 'limit' || self.keywordFound;
                         if (links && links.length && !isStopped) {
                             self._logToFile(data);
-                            self.sse.write(self.id, JSON.stringify(data));
-                            self.id++;
+							setTimeout(function () {
+								self.sse.write(self.id, JSON.stringify(data));
+								self.id++;
+							}, 100);
+                            
                             if (stopConditions.val == 'keyword') {
                                 self.keywordFound = true;
                             }
@@ -371,6 +374,7 @@ class Crawler {
         var currentDepth = 1;
         this.limit = limit;
         this.keyword = keyword;
+		this.id = 0;
         var self = this;
 
         return new Promise(async function (resolve, reject) {

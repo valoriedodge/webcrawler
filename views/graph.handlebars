@@ -1,5 +1,6 @@
 <div id="eventlink" style="display:none">{{eventurl}}</div>
 <h3>{{title}}</h3>
+<div id="linkcount"></div>
 {{#if keyword}}
 {{keyword}}
 {{/if}}
@@ -281,10 +282,19 @@
     graphSimulation.alpha(.65).restart();
   }
 
+  var numberOfLinks = 0;
+
   // Listening to server for data
   source.addEventListener('message', function (e) {
     var link = JSON.parse(e.data);
-    console.log('Parsed graphData: ', link);
+	
+	numberOfLinks = numberOfLinks + 1;
+	var paragraph = document.getElementById("linkcount");
+	paragraph.innerHTML = "Links Found: " + numberOfLinks;
+	if (numberOfLinks >= 300) {
+		paragraph.innerHTML = "Maximum number of links reached: " + numberOfLinks;
+	}
+    //console.log('Parsed graphData: ', link);
 
     //Temporarily hold new nodes and links between nodes
     const newNodes = [];
