@@ -1,23 +1,106 @@
 body {
   text-align: center;
 }
-form, li, .maintext {
+form, li {
   text-align: left;
 }
 
-.title {
-  margin: 25px 0px;
-  color: purple;
+#main {
+  margin:0;
+  position:fixed;
+  top:100px;
+  right:0;
+  bottom:0;
+  left:0;
 }
-/* #cy {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    right: 0px;
-} */
+.maincontent{
+  height: 800px;
+  width: 100%;
+  margin-top: -50px;
+  background-image: url("../images/cover.png");
+  background-repeat:no-repeat;
+  background-size: cover;
+}
+.title {
+  margin: 10px;
+}
+.maintext {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -moz-transform: translateX(-50%) translateY(-50%);
+  -webkit-transform: translateX(-50%) translateY(-50%);
+  transform: translateX(-50%) translateY(-50%);
+  padding: 20px;
+  background: white;
+  text-align: center;
+}
+.links line {
+  stroke: #aaa;
+  stroke-width: 3px;
+  stroke-opacity: 0.85;
+}
 
-#main { margin:0;position:fixed;top:30px;right:0;bottom:0;left:0; }
-.links line {stroke: #aaa;}
-/*     .nodes circle {pointer-events: all; stroke: none; stroke-width: 40px;} */
+.previouslinks, previouslinks:hover {
+  cursor:pointer;
+  text-decoration: none;
+  color: black;
+  text-align: left;
+}
+img {
+  margin-left: -430px;
+  width:100%;
+}
+/* .about-image {
+  background-image: url("../images/cover.png");
+  background-repeat: no-repeat; */
+  /* margin-left: -10px;
+  margin-right: -10px; */
+  /* max-width: 200%; */
+  /* display:block; */
+    /* position:absolute; */
+    /* background:url(../images/House-03.png); */
+    /* background-repeat:no-repeat; */
+    /* background-size: 200% 200%; */
+    /* width:122px;
+    height:148px; */
+    /* float:right; */
+    /* bottom:0;
+    right:0; */
+  /* background-color: blue; */
+/* } */
+.mainurl {
+  font-size: large;
+}
+/*Shape Specific class --> Cirlce*/
+.circle {
+  pointer-event: all;
+  stroke-width: 1.5px;
+  stroke: black;
+  cursor: pointer;
+}
+
+/*Shape Specific Class --> Star*/
+.star {
+  pointer-event: all;
+  stroke-width: 1.5px;
+  stroke: black;
+  fill: yellow;
+  cursor: pointer;
+}
+
+#info {
+  line-height: 10px;
+  padding: 10px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 20em;
+  width: 30em;
+  z-index: 10;
+  /* border: 1px solid black; */
+}
+
+#info #url {
+  color: red;
+}
